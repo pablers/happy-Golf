@@ -1,61 +1,89 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
+import { User, Prisma } from '@prisma/client';
 import { UserProfile } from './user.interface';
-
-// This is a mock user type for our in-memory database
-export type User = {
-    id: number;
-    email: string;
-    passwordHash: string;
-    profile: UserProfile;
-};
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [];
+  constructor(private prisma: PrismaService) {}
 
-  constructor() {
-    // Pre-seed a user for easy testing
-    this.create('pablo@test.com', 'password123', 'Pablo Reina').catch(console.error);
-  }
-
-  async findOneByEmail(email: string): Promise<User | undefined> {
-    return this.users.find(user => user.email === email);
+  async findOneByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { hcpHistory: true },
+    });
   }
   
-  async findOneById(id: number): Promise<User | undefined> {
-    return this.users.find(user => user.id === id);
+  async findOneById(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { hcpHistory: true },
+    });
   }
 
   async create(email: string, password: string, name: string): Promise<User> {
-    if (this.users.some(user => user.email === email)) {
+    const existingUser = await this.findOneByEmail(email);
+    if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     
-    const newUser: User = {
-      id: this.users.length + 1,
-      email,
-      passwordHash,
-      profile: {
+    return this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
         name,
-        hcpHistory: [{ date: new Date().toISOString(), hcp: 18.0 }], // Default HCP history
         favoriteCourseIds: [],
         trainingObjective: 'recommended',
+        hcpHistory: {
+          create: [
+            {
+              date: new Date(),
+              hcp: 18.0,
+            },
+          ],
+        },
       },
-    };
-    this.users.push(newUser);
-    return newUser;
+      include: {
+        hcpHistory: true,
+      },
+    });
   }
 
   async updateProfile(userId: number, profileData: UserProfile): Promise<User> {
-      const userIndex = this.users.findIndex(user => user.id === userId);
-      if (userIndex === -1) {
-          throw new Error('User not found');
-      }
-      this.users[userIndex].profile = profileData;
-      return this.users[userIndex];
+    const { hcpHistory, ...profileFields } = profileData;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update the scalar fields on the User
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...profileFields,
+        },
+      });
+
+      // 2. Delete existing HCP records
+      await tx.hcpRecord.deleteMany({
+        where: { userId: userId },
+      });
+
+      // 3. Create new HCP records
+      await tx.hcpRecord.createMany({
+        data: hcpHistory.map((record) => ({
+          userId: userId,
+          date: new Date(record.date),
+          hcp: record.hcp,
+        })),
+      });
+
+      // 4. Return the user with the updated history
+      return tx.user.findUnique({
+        where: { id: userId },
+        include: { hcpHistory: true },
+      });
+    });
   }
 }
