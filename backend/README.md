@@ -26,6 +26,8 @@ To run the application in watch mode (rebuilds on file change):
 npm run start:dev
 ```
 
+> **Note:** This is the only command you need to run for development. It automatically compiles your code and restarts the server when you make changes. You do not need to run `npm run build` separately.
+
 The server will be running on `http://localhost:3001`.
 
 ### 3. API Endpoints
