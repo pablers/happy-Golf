@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  password        String
+  hcp             Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  rounds          Round[]
+}
+
+model Round {
+  id                String    @id @default(cuid())
+  date              DateTime
+  courseId          String
+  roundType         String
+  practiceTime      String?
+  initialWeather    String?
+  initialWind       String?
+  turfCondition     String?
+  greenSpeed        String?
+  physicalState     String?
+  mentalState       String?
+
+  user              User      @relation(fields: [userId], references: [id])
+  userId            String
+
+  holeScores        HoleScore[]
+  postRoundAnswers  PostRoundAnswers?
+}
+
+model HoleScore {
+  id          String  @id @default(cuid())
+  hole        Int
+  strokes     Int
+  putts       Int
+  fairwayHit  Boolean?
+  comment     String?
+
+  round       Round   @relation(fields: [roundId], references: [id])
+  roundId     String
+}
+
+model PostRoundAnswers {
+  id                String  @id @default(cuid())
+  weatherH7Confirm  String?
+  weatherH7New      String?
+  windH7Change      String?
+  weatherH15Confirm String?
+  weatherH15New     String?
+  windH15Change     String?
+
+  round             Round   @relation(fields: [roundId], references: [id])
+  roundId           String  @unique
+}
