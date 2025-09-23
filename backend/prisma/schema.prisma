@@ -50,7 +50,7 @@ model HoleScore {
   fairwayHit  Boolean?
   comment     String?
 
-  round       Round   @relation(fields: [roundId], references: [id])
+  round       Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
   roundId     String
 }
 
@@ -63,6 +63,6 @@ model PostRoundAnswers {
   weatherH15New     String?
   windH15Change     String?
 
-  round             Round   @relation(fields: [roundId], references: [id])
+  round             Round   @relation(fields: [roundId], references: [id], onDelete: Cascade)
   roundId           String  @unique
 }
