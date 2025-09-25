@@ -20,21 +20,29 @@ async function main() {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash('password', saltRounds);
 
-    // Preparamos el payload cumpliendo con el tipo generado por Prisma.
-    const userData: Prisma.UserCreateInput = {
+    // Inspeccionamos el modelo actual para adaptar el payload a los campos presentes.
+    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
+    const userHasTrainingObjective = userModel?.fields.some((field) => field.name === 'trainingObjective');
+    const userHasHcp = userModel?.fields.some((field) => field.name === 'hcp');
+
+    // Construimos el usuario respetando los campos obligatorios del esquema introspectado.
+    const userData = {
       email: guestEmail,
       name: 'Invitado',
       passwordHash,
-    };
+      trainingObjective: 'Sin definir',
+    } as Prisma.UserCreateInput & Record<string, unknown>;
 
-    // Solo añadimos el HCP si la columna existe en el modelo actual.
-    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
-    if (userModel?.fields.some((field) => field.name === 'hcp')) {
-      (userData as Prisma.UserCreateInput & { hcp: number }).hcp = 18.0;
+    if (!userHasTrainingObjective) {
+      delete userData.trainingObjective;
+    }
+
+    if (userHasHcp) {
+      userData.hcp = 18.0;
     }
 
     guestUser = await prisma.user.create({
-      data: userData,
+      data: userData as Prisma.UserCreateInput,
     });
     console.log(`Created guest user: ${guestUser.email}`);
   } else {
@@ -96,7 +104,12 @@ async function main() {
 
     // Persist the round metadata first so that we have an id to link the hole scores to.
     // Generamos la ronda cuidando los campos obligatorios según el esquema disponible.
-    const roundData: Prisma.RoundCreateInput = {
+    const roundModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'Round');
+    const roundHasUserHcp = roundModel?.fields.some((field) => field.name === 'userHcp');
+    const parsedHcp = row.userHcp ? Number.parseFloat(row.userHcp) : undefined;
+    const fallbackHcp = typeof parsedHcp === 'number' && Number.isFinite(parsedHcp) ? parsedHcp : 18.0;
+
+    const roundData = {
       id: row.id || randomUUID(),
       date: new Date(row.date),
       courseId: row.courseId,
@@ -108,20 +121,18 @@ async function main() {
       greenSpeed: row.green_speed || null,
       physicalState: row.physical_state || null,
       mentalState: row.mental_state || null,
+      userHcp: fallbackHcp,
       user: {
         connect: { id: guestUser.id },
       },
-    };
+    } as Prisma.RoundCreateInput & Record<string, unknown>;
 
-    const roundModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'Round');
-    if (roundModel?.fields.some((field) => field.name === 'userHcp')) {
-      const parsedHcp = row.userHcp ? Number.parseFloat(row.userHcp) : undefined;
-      const userHcp = typeof parsedHcp === 'number' && Number.isFinite(parsedHcp) ? parsedHcp : 18.0;
-      (roundData as Prisma.RoundCreateInput & { userHcp: number }).userHcp = userHcp;
+    if (!roundHasUserHcp) {
+      delete roundData.userHcp;
     }
 
     const round = await prisma.round.create({
-      data: roundData,
+      data: roundData as Prisma.RoundCreateInput,
     });
 
     // Store the individual hole scores in bulk for the newly created round.
