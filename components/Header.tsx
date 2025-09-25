@@ -1,26 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { MenuIcon, GolfBallIcon, MetronomeIcon, ScorecardIcon, ProfileIcon, AnalysisIcon, LogoutIcon, SettingsIcon, GolfBagIcon } from './icons';
 
-type View = 'metronome' | 'newRound' | 'profile' | 'analysis' | 'settings' | 'clubhouse';
-
 interface HeaderProps {
-  onNavigate: (view: View) => void;
   onLogout: () => void;
 }
 
-const NavLink: React.FC<{
-    onClick: () => void;
+const NavLinkItem: React.FC<{
+    to: string;
     children: React.ReactNode;
-}> = ({ onClick, children }) => (
-    <a onClick={onClick} className="flex items-center gap-3 px-4 py-2 text-gray-800 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
+    onNavigate?: () => void;
+}> = ({ to, children, onNavigate }) => (
+    <Link to={to} onClick={onNavigate} className="flex items-center gap-3 px-4 py-2 text-gray-800 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
         {children}
-    </a>
+    </Link>
 );
 
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Redirige a la pantalla de inicio de sesión cuando se cierra la sesión.
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,15 +35,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
     };
   }, []);
 
-  const handleNavigation = (view: View) => {
-    onNavigate(view);
-    setIsMenuOpen(false);
-  };
-  
   const handleLogout = () => {
-      onLogout();
-      setIsMenuOpen(false);
-  }
+    onLogout();
+    setIsMenuOpen(false);
+    navigate('/login');
+  };
 
   return (
     <header className="relative w-full p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700/50 flex items-center justify-between z-40 flex-shrink-0">
@@ -57,15 +54,17 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
         {isMenuOpen && (
           <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl animate-fade-in-down">
             <nav className="p-2">
-              <NavLink onClick={() => handleNavigation('newRound')}><ScorecardIcon className="w-5 h-5" /> Nueva Ronda</NavLink>
-              <NavLink onClick={() => handleNavigation('analysis')}><AnalysisIcon className="w-5 h-5" /> Análisis</NavLink>
-              <NavLink onClick={() => handleNavigation('clubhouse')}><GolfBagIcon className="w-5 h-5" /> Mi juego de palos</NavLink>
-              <NavLink onClick={() => handleNavigation('metronome')}><MetronomeIcon className="w-5 h-5" /> Metrónomo</NavLink>
+              <NavLinkItem to="/" onNavigate={() => setIsMenuOpen(false)}><ScorecardIcon className="w-5 h-5" /> Nueva Ronda</NavLinkItem>
+              <NavLinkItem to="/analysis" onNavigate={() => setIsMenuOpen(false)}><AnalysisIcon className="w-5 h-5" /> Análisis</NavLinkItem>
+              <NavLinkItem to="/clubhouse" onNavigate={() => setIsMenuOpen(false)}><GolfBagIcon className="w-5 h-5" /> Mi juego de palos</NavLinkItem>
+              <NavLinkItem to="/metronome" onNavigate={() => setIsMenuOpen(false)}><MetronomeIcon className="w-5 h-5" /> Metrónomo</NavLinkItem>
               <div className="my-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-              <NavLink onClick={() => handleNavigation('profile')}><ProfileIcon className="w-5 h-5" /> Perfil</NavLink>
-              <NavLink onClick={() => handleNavigation('settings')}><SettingsIcon className="w-5 h-5" /> Ajustes</NavLink>
+              <NavLinkItem to="/profile" onNavigate={() => setIsMenuOpen(false)}><ProfileIcon className="w-5 h-5" /> Perfil</NavLinkItem>
+              <NavLinkItem to="/settings" onNavigate={() => setIsMenuOpen(false)}><SettingsIcon className="w-5 h-5" /> Ajustes</NavLinkItem>
               <div className="my-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-              <NavLink onClick={handleLogout}><LogoutIcon className="w-5 h-5" /> Salir</NavLink>
+              <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-4 py-2 text-gray-800 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                <LogoutIcon className="w-5 h-5" /> Salir
+              </button>
             </nav>
           </div>
         )}
