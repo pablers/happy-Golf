@@ -22,7 +22,7 @@ async function main() {
       data: {
         email: guestEmail,
         name: 'Invitado',
-        password: passwordHash,
+        passwordHash,
         hcp: 18.0,
       },
     });
@@ -84,7 +84,8 @@ async function main() {
 
     if (holeScores.length === 0) continue;
 
-    await prisma.round.create({
+    // Persist the round metadata first so that we have an id to link the hole scores to.
+    const round = await prisma.round.create({
       data: {
         date: new Date(row.date),
         courseId: row.courseId,
@@ -99,10 +100,15 @@ async function main() {
         user: {
           connect: { id: guestUser.id },
         },
-        holeScores: {
-          create: holeScores,
-        },
       },
+    });
+
+    // Store the individual hole scores in bulk for the newly created round.
+    await prisma.holeScore.createMany({
+      data: holeScores.map((score) => ({
+        ...score,
+        roundId: round.id,
+      })),
     });
     console.log(`Created round for course ${row.courseId} on ${row.date}`);
   }

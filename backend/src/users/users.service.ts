@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -27,7 +27,7 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         email,
-        password: passwordHash,
+        passwordHash,
         name,
         hcp: 18.0, // Default HCP
       },
@@ -40,7 +40,7 @@ export class UsersService {
           throw new NotFoundException('User not found');
       }
 
-      const { id, email, password, createdAt, updatedAt, ...restOfProfileData } = profileData;
+      const { id, email, passwordHash, createdAt, updatedAt, ...restOfProfileData } = profileData;
 
       return this.prisma.user.update({
           where: { id: userId },
