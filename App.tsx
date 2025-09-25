@@ -1,3 +1,8 @@
+
+
+
+
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { CLUB_TEMPO_CONFIGS } from './constants';
 import type { ScorecardSessionSetup, GolfCourse, RoundType, WeatherCondition, WindCondition, PracticeTime, UserProfile, SavedRound, Theme, View, SavedRoundAnalysis } from './types';
@@ -21,9 +26,11 @@ import SettingsView from './components/SettingsView';
 import TrainingGuideView from './components/TrainingGuideView';
 import ClubhouseView from './components/ClubhouseView';
 import CourseAnalysisView from './components/CourseAnalysisView';
+import { fetchAndParseRounds } from './services/roundImporter';
 
 type RoundSetupStep = 'course_selection' | 'round_type' | 'conditions' | 'playing';
 
+const SAVED_ROUNDS_STORAGE_KEY = 'golf-saved-rounds';
 const THEME_STORAGE_KEY = 'golf-theme';
 
 const GUEST_PROFILE: UserProfile = {
@@ -131,25 +138,48 @@ export default function App(): React.ReactNode {
   }, [theme]);
 
   useEffect(() => {
-    const validateTokenAndLoadData = async () => {
+    const validateToken = async () => {
       if (token) {
         try {
           const profile = await api.getProfile(token);
           setUserProfile(profile);
-          const rounds = await api.getRounds(token);
-          setSavedRounds(rounds);
         } catch (error) {
           console.error("Session expired or invalid.", error);
           localStorage.removeItem('golf_token');
           setToken(null);
           setUserProfile(null);
-          setSavedRounds([]);
         }
       }
       setIsLoading(false);
     };
-    validateTokenAndLoadData();
+    validateToken();
   }, [token]);
+
+  useEffect(() => {
+    const loadRoundData = async () => {
+        try {
+            const roundsFromCSV = await fetchAndParseRounds();
+            const localRoundsData = localStorage.getItem(SAVED_ROUNDS_STORAGE_KEY);
+            
+            if (localRoundsData) {
+                const localRounds: SavedRound[] = JSON.parse(localRoundsData);
+                const localRoundIds = new Set(localRounds.map(r => r.id));
+                const filteredCsvRounds = roundsFromCSV.filter(r => !localRoundIds.has(r.id));
+                const allRounds = [...localRounds, ...filteredCsvRounds];
+                allRounds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setSavedRounds(allRounds);
+            } else {
+                 const sortedRounds = roundsFromCSV.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                 setSavedRounds(sortedRounds);
+            }
+        } catch (error) {
+            console.error("Failed to load round data:", error);
+            setSavedRounds([]);
+        }
+    };
+    
+    loadRoundData();
+  }, []);
 
   const handleLoginSuccess = (newToken: string, profile: UserProfile) => {
     localStorage.setItem('golf_token', newToken);
@@ -159,19 +189,17 @@ export default function App(): React.ReactNode {
   
   const handleSkipLogin = () => {
     setUserProfile(GUEST_PROFILE);
-    setSavedRounds([]); // No rounds for guest
   };
 
   const handleLogout = () => {
     localStorage.removeItem('golf_token');
     setToken(null);
     setUserProfile(null);
-    setSavedRounds([]);
     setActiveView('newRound');
   };
 
   const handleProfileSave = async (profile: UserProfile) => {
-    if (token && userProfile?.name !== 'Invitado') {
+    if (token && userProfile?.name !== 'Invitado') { // User is logged in
       try {
         const updatedProfile = await api.updateProfile(token, profile);
         setUserProfile(updatedProfile);
@@ -181,19 +209,28 @@ export default function App(): React.ReactNode {
         console.error("Failed to save profile:", error);
         alert("Error al guardar el perfil. Inténtalo de nuevo.");
       }
-    } else {
+    } else { // Guest user
         setUserProfile(profile);
         alert("Perfil de invitado actualizado para esta sesión.");
         setActiveView('newRound');
     }
   };
   
+  const handleClearRounds = () => {
+      if (window.confirm("¿Estás seguro de que quieres borrar todo tu historial de rondas? Esta acción no se puede deshacer.")) {
+          setSavedRounds([]);
+          localStorage.removeItem(SAVED_ROUNDS_STORAGE_KEY);
+          alert("Historial de rondas borrado.");
+      }
+  };
+
   const handleNavigate = (view: View) => {
     if (view === 'newRound') {
       setSessionSetup({});
       setRoundSetupStep('course_selection');
     }
     if (view === 'profile' && activeView === 'trainingGuide') {
+        // Special case: going back from guide to profile
         setActiveView('profile');
         return;
     }
@@ -221,20 +258,13 @@ export default function App(): React.ReactNode {
     setRoundSetupStep('playing');
   };
   
-  const handleSaveRound = async (round: SavedRound) => {
-    if (!token) {
-      alert("Debes iniciar sesión para guardar rondas.");
-      return;
-    }
-    try {
-      const newRound = await api.createRound(token, round);
-      setSavedRounds(prevRounds => [newRound, ...prevRounds].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      alert("Ronda guardada con éxito en tu historial.");
-      handleNavigate('analysis');
-    } catch (error) {
-      console.error("Failed to save round:", error);
-      alert("Error al guardar la ronda. Inténtalo de nuevo.");
-    }
+  const handleSaveRound = (round: SavedRound) => {
+    const newSavedRounds = [round, ...savedRounds];
+    newSavedRounds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setSavedRounds(newSavedRounds);
+    localStorage.setItem(SAVED_ROUNDS_STORAGE_KEY, JSON.stringify(newSavedRounds));
+    alert("Ronda guardada con éxito en tu historial.");
+    handleNavigate('analysis');
   };
   
   const handleSelectRoundForAnalysis = (roundId: string) => {
@@ -270,7 +300,7 @@ export default function App(): React.ReactNode {
           }
           return <AnalysisView savedRounds={savedRounds} onSelectRound={handleSelectRoundForAnalysis} onSelectCourse={handleSelectCourseForAnalysis} />;
       case 'settings':
-        return <SettingsView currentTheme={theme} onSetTheme={setTheme} onClearRounds={() => alert("Esta función está deshabilitada temporalmente.")} />;
+        return <SettingsView currentTheme={theme} onSetTheme={setTheme} onClearRounds={handleClearRounds} />;
       case 'trainingGuide':
         return <TrainingGuideView userProfile={userProfile} onBack={() => handleNavigate('profile')} />;
       case 'clubhouse':
@@ -287,11 +317,13 @@ export default function App(): React.ReactNode {
             if (sessionSetup.course && sessionSetup.roundType && sessionSetup.practiceTime && sessionSetup.weather && sessionSetup.wind) {
               return <Scorecard setup={sessionSetup as ScorecardSessionSetup} userProfile={userProfile} onSaveRound={handleSaveRound} />;
             }
+            // Fallback to course selection if setup is incomplete
             return <CourseSelectionView userProfile={userProfile} onCourseSelected={handleCourseSelected} />;
         }
     }
   };
   
+  // FIX: The component must return a value. The rendering logic for loading and authentication states was missing.
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">

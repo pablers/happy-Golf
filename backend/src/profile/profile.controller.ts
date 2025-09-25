@@ -1,8 +1,7 @@
-import { Controller, Get, Put, UseGuards, Request, Body, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Put, UseGuards, Request, Body } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 import { UpdateProfileDto } from './dto/profile.dto';
-import { User } from '@prisma/client';
 
 @Controller('profile')
 export class ProfileController {
@@ -10,20 +9,20 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getProfile(@Request() req): Promise<Omit<User, 'password'>> {
+  async getProfile(@Request() req) {
+    // req.user is populated by the JwtStrategy
     const user = await this.usersService.findOneById(req.user.userId);
     if (!user) {
-        throw new NotFoundException('User not found');
+        // This case should be rare if token is valid
+        throw new Error('User not found');
     }
-    const { password, ...result } = user;
-    return result;
+    return user.profile;
   }
 
   @UseGuards(JwtAuthGuard)
   @Put()
-  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto): Promise<Omit<User, 'password'>> {
+  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     const updatedUser = await this.usersService.updateProfile(req.user.userId, updateProfileDto);
-    const { password, ...result } = updatedUser;
-    return result;
+    return updatedUser.profile;
   }
 }

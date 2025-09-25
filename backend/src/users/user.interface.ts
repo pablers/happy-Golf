@@ -1,3 +1,11 @@
-// This file is temporarily left empty.
-// The User model from Prisma is used directly in the services.
-// We may need to add interfaces here later for DTOs or other purposes.
+export interface HcpRecord {
+  date: string;
+  hcp: number;
+}
+
+export interface UserProfile {
+  name: string;
+  hcpHistory: HcpRecord[];
+  favoriteCourseIds: string[];
+  trainingObjective: string;
+}
