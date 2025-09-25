@@ -1,12 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Round } from '@prisma/client';
 
 @Injectable()
 export class RoundsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createRoundDto: any, userId: string): Promise<Round> {
+  async create(createRoundDto: any, userId: string): Promise<Record<string, any>> {
     const { holeScores, ...roundData } = createRoundDto;
     return this.prisma.round.create({
       data: {
@@ -24,7 +23,7 @@ export class RoundsService {
     });
   }
 
-  async findAll(userId: string): Promise<Round[]> {
+  async findAll(userId: string): Promise<Record<string, any>[]> {
     return this.prisma.round.findMany({
       where: { userId },
       include: {
@@ -36,7 +35,7 @@ export class RoundsService {
     });
   }
 
-  async findOne(id: string): Promise<Round | null> {
+  async findOne(id: string): Promise<Record<string, any> | null> {
     const round = await this.prisma.round.findUnique({
       where: { id },
       include: {
@@ -50,7 +49,7 @@ export class RoundsService {
     return round;
   }
 
-  async update(id: string, updateRoundDto: any): Promise<Round> {
+  async update(id: string, updateRoundDto: any): Promise<Record<string, any>> {
     // For now, we only support updating the main round data, not the hole scores.
     const { holeScores, ...roundData } = updateRoundDto;
     return this.prisma.round.update({
@@ -59,7 +58,7 @@ export class RoundsService {
     });
   }
 
-  async remove(id: string): Promise<Round> {
+  async remove(id: string): Promise<Record<string, any>> {
     return this.prisma.round.delete({
       where: { id },
     });

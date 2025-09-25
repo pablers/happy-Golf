@@ -2,7 +2,9 @@ import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/co
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+
+type UserRecord = { passwordHash: string } & Record<string, any>;
+type PublicUser = Omit<UserRecord, 'passwordHash'>;
 
 @Injectable()
 export class AuthService {
@@ -11,10 +13,10 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<Omit<User, 'passwordHash'>> {
-    const user = await this.usersService.findOneByEmail(email);
+  async validateUser(email: string, pass: string): Promise<PublicUser | null> {
+    const user = (await this.usersService.findOneByEmail(email)) as UserRecord | null;
     // Compare the provided password against the stored hash before exposing the profile data.
-    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
+    if (user && typeof user.passwordHash === 'string' && (await bcrypt.compare(pass, user.passwordHash))) {
       const { passwordHash, ...result } = user;
       return result;
     }
@@ -36,7 +38,7 @@ export class AuthService {
 
   async register(email: string, pass:string, name: string) {
     try {
-      const newUser = await this.usersService.create(email, pass, name);
+      const newUser = (await this.usersService.create(email, pass, name)) as UserRecord;
       const payload = { sub: newUser.id, email: newUser.email };
       const { passwordHash, ...profile } = newUser;
       return {

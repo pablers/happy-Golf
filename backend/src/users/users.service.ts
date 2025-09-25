@@ -1,21 +1,20 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findOneByEmail(email: string): Promise<User | undefined> {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
-  
-  async findOneById(id: string): Promise<User | undefined> {
-    return this.prisma.user.findUnique({ where: { id } });
+  async findOneByEmail(email: string): Promise<Record<string, any> | null> {
+    return (await this.prisma.user.findUnique({ where: { email } })) as Record<string, any> | null;
   }
 
-  async create(email: string, password: string, name: string): Promise<User> {
+  async findOneById(id: string): Promise<Record<string, any> | null> {
+    return (await this.prisma.user.findUnique({ where: { id } })) as Record<string, any> | null;
+  }
+
+  async create(email: string, password: string, name: string): Promise<Record<string, any>> {
     const existingUser = await this.findOneByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -23,45 +22,36 @@ export class UsersService {
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
-    
-    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
-    const userData: Record<string, unknown> = {
-      email,
-      passwordHash,
-      name,
-    };
-
-    if (userModel?.fields.some((field) => field.name === 'hcp')) {
-      userData.hcp = 18.0; // Default HCP solo si la columna existe.
-    }
 
     return this.prisma.user.create({
-      data: userData,
-    });
+      data: {
+        email,
+        passwordHash,
+        name,
+      },
+    }) as unknown as Record<string, any>;
   }
 
-  async updateProfile(userId: string, profileData: Partial<User>): Promise<User> {
-      const user = await this.findOneById(userId);
-      if (!user) {
-          throw new NotFoundException('User not found');
-      }
+  async updateProfile(userId: string, profileData: Partial<Record<string, any>>): Promise<Record<string, any>> {
+    const user = await this.findOneById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    const { id, email, passwordHash, createdAt, updatedAt, ...restOfProfileData } = profileData;
+    const updatePayload: Record<string, unknown> = {};
 
-    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
-    const editableFields = new Set(
-      userModel?.fields
-        .map((field) => field.name)
-        .filter((fieldName) => !['id', 'email', 'passwordHash', 'createdAt', 'updatedAt'].includes(fieldName)) ?? [],
-    );
+    if (typeof profileData.name === 'string') {
+      updatePayload.name = profileData.name;
+    }
 
-    const sanitizedProfileData = Object.fromEntries(
-      Object.entries(restOfProfileData).filter(([key]) => editableFields.has(key)),
-    );
+    // Solo escribimos el hándicap cuando la columna existe en el esquema actual.
+    if ('hcp' in user && typeof profileData.hcp === 'number') {
+      updatePayload.hcp = profileData.hcp;
+    }
 
     return this.prisma.user.update({
-        where: { id: userId },
-        data: sanitizedProfileData,
-    });
+      where: { id: userId },
+      data: updatePayload,
+    }) as unknown as Record<string, any>;
   }
 }

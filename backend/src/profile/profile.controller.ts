@@ -2,7 +2,9 @@ import { Controller, Get, Put, UseGuards, Request, Body, NotFoundException } fro
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 import { UpdateProfileDto } from './dto/profile.dto';
-import { User } from '@prisma/client';
+
+type UserRecord = { passwordHash?: string } & Record<string, any>;
+type PublicUser = Omit<UserRecord, 'passwordHash'>;
 
 @Controller('profile')
 export class ProfileController {
@@ -10,8 +12,8 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getProfile(@Request() req): Promise<Omit<User, 'passwordHash'>> {
-    const user = await this.usersService.findOneById(req.user.userId);
+  async getProfile(@Request() req): Promise<PublicUser> {
+    const user = (await this.usersService.findOneById(req.user.userId)) as UserRecord | null;
     if (!user) {
         throw new NotFoundException('User not found');
     }
@@ -21,8 +23,8 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @Put()
-  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto): Promise<Omit<User, 'passwordHash'>> {
-    const updatedUser = await this.usersService.updateProfile(req.user.userId, updateProfileDto);
+  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto): Promise<PublicUser> {
+    const updatedUser = (await this.usersService.updateProfile(req.user.userId, updateProfileDto)) as UserRecord;
     const { passwordHash, ...result } = updatedUser;
     return result;
   }

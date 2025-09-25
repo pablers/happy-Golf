@@ -1,56 +1,102 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
-const { parse } = require('csv-parse');
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { parse } from 'csv-parse';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Start seeding...');
+/**
+ * Reads the Prisma schema on disk and returns the list of field names for the
+ * requested model so we only send columns that currently exist in Supabase.
+ */
+const schemaFieldCache = new Map<string, Set<string>>();
 
-  // 1. Create or find the guest user
-  const guestEmail = 'invitado@happygolf.com';
-  let guestUser = await prisma.user.findUnique({
-    where: { email: guestEmail },
-  });
-
-  if (!guestUser) {
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash('password', saltRounds);
-
-    // Inspeccionamos el modelo actual para adaptar el payload a los campos presentes.
-    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
-    const userHasTrainingObjective = userModel?.fields.some((field) => field.name === 'trainingObjective');
-    const userHasHcp = userModel?.fields.some((field) => field.name === 'hcp');
-
-    // Construimos el usuario respetando los campos obligatorios del esquema introspectado.
-    const userData = {
-      email: guestEmail,
-      name: 'Invitado',
-      passwordHash,
-      trainingObjective: 'Sin definir',
-    } as Prisma.UserCreateInput & Record<string, unknown>;
-
-    if (!userHasTrainingObjective) {
-      delete userData.trainingObjective;
-    }
-
-    if (userHasHcp) {
-      userData.hcp = 18.0;
-    }
-
-    guestUser = await prisma.user.create({
-      data: userData as Prisma.UserCreateInput,
-    });
-    console.log(`Created guest user: ${guestUser.email}`);
-  } else {
-    console.log(`Found guest user: ${guestUser.email}`);
+function getModelFieldSet(modelName: string): Set<string> {
+  if (schemaFieldCache.has(modelName)) {
+    return schemaFieldCache.get(modelName)!;
   }
 
-  // 2. Read and parse the CSV file
-  const csvFilePath = path.resolve(__dirname, '../../data/registro-partidas.csv');
+  const schemaPath = resolve(__dirname, 'schema.prisma');
+  const schemaContent = readFileSync(schemaPath, 'utf-8');
+  const lines = schemaContent.split(/\r?\n/);
+
+  const fieldNames = new Set<string>();
+  let insideModel = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!insideModel) {
+      if (trimmed.startsWith(`model ${modelName} `) || trimmed === `model ${modelName}` || trimmed === `model ${modelName} {`) {
+        insideModel = true;
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith('}')) {
+      break;
+    }
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('@@')) {
+      continue;
+    }
+
+    const fieldName = trimmed.split(/\s+/)[0];
+    if (fieldName) {
+      fieldNames.add(fieldName);
+    }
+  }
+
+  schemaFieldCache.set(modelName, fieldNames);
+  return fieldNames;
+}
+
+/**
+ * Creates the guest account if it does not exist, making sure optional fields
+ * such as `hcp` or `trainingObjective` are only sent when the columns are
+ * present in the database.
+ */
+async function ensureGuestUser(): Promise<{ id: string }> {
+  const guestEmail = 'invitado@happygolf.com';
+  const existing = await prisma.user.findUnique({ where: { email: guestEmail } });
+
+  if (existing) {
+    console.log(`Found guest user: ${existing.email}`);
+    return existing;
+  }
+
+  const saltRounds = 10;
+  const passwordHash = await bcrypt.hash('password', saltRounds);
+
+  const userFields = getModelFieldSet('User');
+  const userData: Record<string, unknown> = {
+    email: guestEmail,
+    name: 'Invitado',
+    passwordHash,
+  };
+
+  if (userFields.has('trainingObjective')) {
+    Object.assign(userData, { trainingObjective: 'Sin definir' });
+  }
+
+  if (userFields.has('hcp')) {
+    userData.hcp = 18.0;
+  }
+
+  const created = await prisma.user.create({ data: userData });
+  console.log(`Created guest user: ${created.email}`);
+  return created;
+}
+
+/**
+ * Loads every round from the CSV export, creates the round entry and later its
+ * hole scores while gracefully skipping tables that might not exist yet.
+ */
+async function seedRounds(guestUserId: string): Promise<void> {
+  const csvFilePath = resolve(__dirname, '../../data/registro-partidas.csv');
+  const fileContent = readFileSync(csvFilePath, { encoding: 'utf-8' });
+
   const headers = [
     'id', 'date', 'userName', 'userHcp', 'courseId', 'roundType',
     'h1_strokes', 'h1_putts', 'h1_comment', 'h1_fairwayHit',
@@ -74,43 +120,53 @@ async function main() {
     'practice_time', 'initial_weather', 'initial_wind',
     'weather_h7_confirm', 'weather_h7_new', 'wind_h7_change',
     'weather_h15_confirm', 'weather_h15_new', 'wind_h15_change',
-    'turf_condition', 'green_speed', 'physical_state', 'mental_state'
+    'turf_condition', 'green_speed', 'physical_state', 'mental_state',
   ];
-
-  const fileContent = fs.readFileSync(csvFilePath, { encoding: 'utf-8' });
 
   const parser = parse(fileContent, {
     delimiter: ';',
     columns: headers,
-    from_line: 2, // Skip header row
+    from_line: 2, // Omitimos la cabecera original del CSV.
   });
 
-  for await (const row of parser) {
-    const holeScores = [];
+  const roundFields = getModelFieldSet('Round');
+  // Prisma genera el delegado de la relación siguiendo lowerCamelCase; si el modelo no existe lo omitimos más adelante.
+  const holeScoreDelegate = (prisma as Record<string, any>).holeScore;
+
+  if (!holeScoreDelegate?.createMany) {
+    console.warn('No se encontró un delegado válido para los scores por hoyo; se omitirá su carga.');
+  }
+
+  for await (const row of parser as AsyncIterable<Record<string, string>>) {
+    const holeScores = [] as Array<{ hole: number; strokes: number; putts: number; fairwayHit: boolean | null; comment: string | null }>;
     for (let i = 1; i <= 18; i++) {
-      const strokes = row[`h${i}_strokes`] ? parseInt(row[`h${i}_strokes`], 10) : null;
-      if (strokes !== null) {
-        holeScores.push({
-          hole: i,
-          strokes: strokes,
-          putts: row[`h${i}_putts`] ? parseInt(row[`h${i}_putts`], 10) : 0,
-          fairwayHit: row[`h${i}_fairwayHit`] === 'true' ? true : row[`h${i}_fairwayHit`] === 'false' ? false : null,
-          comment: row[`h${i}_comment`] || null,
-        });
+      const strokes = row[`h${i}_strokes`] ? Number.parseInt(row[`h${i}_strokes`], 10) : null;
+      if (strokes === null || Number.isNaN(strokes)) {
+        continue;
       }
+
+      holeScores.push({
+        hole: i,
+        strokes,
+        putts: row[`h${i}_putts`] ? Number.parseInt(row[`h${i}_putts`], 10) : 0,
+        fairwayHit:
+          row[`h${i}_fairwayHit`] === 'true'
+            ? true
+            : row[`h${i}_fairwayHit`] === 'false'
+              ? false
+              : null,
+        comment: row[`h${i}_comment`] || null,
+      });
     }
 
-    if (holeScores.length === 0) continue;
+    if (holeScores.length === 0) {
+      continue;
+    }
 
-    // Persist the round metadata first so that we have an id to link the hole scores to.
-    // Generamos la ronda cuidando los campos obligatorios según el esquema disponible.
-    const roundModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'Round');
-    const roundHasUserHcp = roundModel?.fields.some((field) => field.name === 'userHcp');
     const parsedHcp = row.userHcp ? Number.parseFloat(row.userHcp) : undefined;
-    const fallbackHcp = typeof parsedHcp === 'number' && Number.isFinite(parsedHcp) ? parsedHcp : 18.0;
+    const fallbackHcp = Number.isFinite(parsedHcp) ? (parsedHcp as number) : 18.0;
 
-    const roundData = {
-      id: row.id || randomUUID(),
+    const roundData: Record<string, unknown> = {
       date: new Date(row.date),
       courseId: row.courseId,
       roundType: row.roundType,
@@ -121,48 +177,39 @@ async function main() {
       greenSpeed: row.green_speed || null,
       physicalState: row.physical_state || null,
       mentalState: row.mental_state || null,
-      userHcp: fallbackHcp,
       user: {
-        connect: { id: guestUser.id },
+        connect: { id: guestUserId },
       },
-    } as Prisma.RoundCreateInput & Record<string, unknown>;
+    };
 
-    if (!roundHasUserHcp) {
-      delete roundData.userHcp;
+    if (row.id) {
+      Object.assign(roundData, { id: row.id });
     }
 
-    const round = await prisma.round.create({
-      data: roundData as Prisma.RoundCreateInput,
-    });
-
-    // Store the individual hole scores in bulk for the newly created round.
-    const holeScoreModel = Prisma.dmmf.datamodel.models.find((model) =>
-      model.name.toLowerCase().includes('holescore'),
-    );
-
-    if (!holeScoreModel) {
-      console.warn('No se encontró un modelo para anotar hoyos; se omiten los scores.');
-      continue;
+    if (roundFields.has('userHcp')) {
+      Object.assign(roundData, { userHcp: fallbackHcp });
     }
 
-    const holeScoreDelegateName = holeScoreModel.name[0].toLowerCase() + holeScoreModel.name.slice(1);
-    const holeScoreDelegate = (prisma as Record<string, any>)[holeScoreDelegateName];
+    const round = await prisma.round.create({ data: roundData });
 
-    if (!holeScoreDelegate?.createMany) {
-      console.warn(`El delegado ${holeScoreDelegateName} no soporta createMany; se omiten los scores.`);
-      continue;
+    if (holeScoreDelegate?.createMany) {
+      await holeScoreDelegate.createMany({
+        data: holeScores.map((score) => ({
+          id: randomUUID(),
+          ...score,
+          roundId: round.id,
+        })),
+      });
     }
 
-    await holeScoreDelegate.createMany({
-      data: holeScores.map((score) => ({
-        id: randomUUID(),
-        ...score,
-        roundId: round.id,
-      })),
-    });
     console.log(`Created round for course ${row.courseId} on ${row.date}`);
   }
+}
 
+async function main() {
+  console.log('Start seeding...');
+  const guestUser = await ensureGuestUser();
+  await seedRounds(guestUser.id);
   console.log('Seeding finished.');
 }
 
