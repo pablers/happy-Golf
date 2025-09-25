@@ -1,26 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { MenuIcon, GolfBallIcon, MetronomeIcon, ScorecardIcon, ProfileIcon, AnalysisIcon, LogoutIcon, SettingsIcon, GolfBagIcon } from './icons';
 
-type View = 'metronome' | 'newRound' | 'profile' | 'analysis' | 'settings' | 'clubhouse';
-
 interface HeaderProps {
-  onNavigate: (view: View) => void;
   onLogout: () => void;
 }
 
 const NavLink: React.FC<{
-    onClick: () => void;
+    to: string;
+    onNavigate: () => void;
     children: React.ReactNode;
-}> = ({ onClick, children }) => (
-    <a onClick={onClick} className="flex items-center gap-3 px-4 py-2 text-gray-800 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer">
+    isActive: boolean;
+}> = ({ to, onNavigate, children, isActive }) => (
+    <Link
+        to={to}
+        onClick={onNavigate}
+        className={`flex items-center gap-3 px-4 py-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer ${
+            isActive ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-gray-800 dark:text-white'
+        }`}
+    >
         {children}
-    </a>
+    </Link>
 );
 
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,11 +41,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
     };
   }, []);
 
-  const handleNavigation = (view: View) => {
-    onNavigate(view);
-    setIsMenuOpen(false);
-  };
-  
   const handleLogout = () => {
       onLogout();
       setIsMenuOpen(false);
@@ -57,15 +59,32 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, onLogout }) => {
         {isMenuOpen && (
           <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl animate-fade-in-down">
             <nav className="p-2">
-              <NavLink onClick={() => handleNavigation('newRound')}><ScorecardIcon className="w-5 h-5" /> Nueva Ronda</NavLink>
-              <NavLink onClick={() => handleNavigation('analysis')}><AnalysisIcon className="w-5 h-5" /> Análisis</NavLink>
-              <NavLink onClick={() => handleNavigation('clubhouse')}><GolfBagIcon className="w-5 h-5" /> Mi juego de palos</NavLink>
-              <NavLink onClick={() => handleNavigation('metronome')}><MetronomeIcon className="w-5 h-5" /> Metrónomo</NavLink>
+              <NavLink to="/" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname === '/'}>
+                <ScorecardIcon className="w-5 h-5" /> Nueva Ronda
+              </NavLink>
+              <NavLink to="/analysis" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname.startsWith('/analysis')}>
+                <AnalysisIcon className="w-5 h-5" /> Análisis
+              </NavLink>
+              <NavLink to="/clubhouse" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname.startsWith('/clubhouse')}>
+                <GolfBagIcon className="w-5 h-5" /> Mi juego de palos
+              </NavLink>
+              <NavLink to="/metronome" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname.startsWith('/metronome')}>
+                <MetronomeIcon className="w-5 h-5" /> Metrónomo
+              </NavLink>
               <div className="my-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-              <NavLink onClick={() => handleNavigation('profile')}><ProfileIcon className="w-5 h-5" /> Perfil</NavLink>
-              <NavLink onClick={() => handleNavigation('settings')}><SettingsIcon className="w-5 h-5" /> Ajustes</NavLink>
+              <NavLink to="/profile" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname.startsWith('/profile')}>
+                <ProfileIcon className="w-5 h-5" /> Perfil
+              </NavLink>
+              <NavLink to="/settings" onNavigate={() => setIsMenuOpen(false)} isActive={location.pathname.startsWith('/settings')}>
+                <SettingsIcon className="w-5 h-5" /> Ajustes
+              </NavLink>
               <div className="my-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-              <NavLink onClick={handleLogout}><LogoutIcon className="w-5 h-5" /> Salir</NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/40"
+                >
+                  <LogoutIcon className="w-5 h-5" /> Salir
+                </button>
             </nav>
           </div>
         )}
