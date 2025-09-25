@@ -63,7 +63,7 @@ async function ensureGuestUser(): Promise<{ id: string }> {
 
   if (existing) {
     console.log(`Found guest user: ${existing.email}`);
-    return existing;
+    return { id: existing.id };
   }
 
   const saltRounds = 10;
@@ -76,17 +76,17 @@ async function ensureGuestUser(): Promise<{ id: string }> {
     passwordHash,
   };
 
-  if (userFields.has('trainingObjective')) {
-    Object.assign(userData, { trainingObjective: 'Sin definir' });
-  }
-
   if (userFields.has('hcp')) {
     userData.hcp = 18.0;
   }
 
-  const created = await prisma.user.create({ data: userData });
+  if (userFields.has('trainingObjective')) {
+    userData.trainingObjective = 'Sin definir';
+  }
+
+  const created = await prisma.user.create({ data: userData as any });
   console.log(`Created guest user: ${created.email}`);
-  return created;
+  return { id: created.id };
 }
 
 /**
@@ -183,14 +183,14 @@ async function seedRounds(guestUserId: string): Promise<void> {
     };
 
     if (row.id) {
-      Object.assign(roundData, { id: row.id });
+      roundData.id = String(row.id);
     }
 
     if (roundFields.has('userHcp')) {
-      Object.assign(roundData, { userHcp: fallbackHcp });
+      roundData.userHcp = fallbackHcp;
     }
 
-    const round = await prisma.round.create({ data: roundData });
+    const round = await prisma.round.create({ data: roundData as any });
 
     if (holeScoreDelegate?.createMany) {
       await holeScoreDelegate.createMany({
