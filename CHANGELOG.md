@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Branch: `feat/refactor-app-component` - 2025-09-25
+
+#### Added
+- **Arquitectura Modular**: Se refactorizó la aplicación para desacoplar el componente monolítico `App.tsx`.
+- **Enrutamiento**: Se introdujo `react-router-dom` para gestionar la navegación, definiendo rutas claras para cada vista.
+- **Gestión de Estado con Context**: Se crearon `AuthContext` y `RoundsContext` para manejar el estado global de la autenticación y las rondas de golf, eliminando la lógica de `App.tsx`.
+- **Componentes de Página**: Se migraron las vistas a componentes de página dedicados dentro de un nuevo directorio `src/pages`.
+- **Layout y Rutas Protegidas**: Se implementó un componente `Layout` principal con rutas protegidas para estandarizar la interfaz y la lógica de autenticación.
+
 ### Branch: `fix/cors-and-docs` - 2025-09-22
 
 #### Fixed
