@@ -42,13 +42,13 @@ Primero, configura e inicia el servidor de backend.
     ```
 
 3.  **Configura las Variables de Entorno**:
-    - Crea una copia del archivo `.env.development` y renómbralo a `.env.development`. Si lo deseas, puedes ajustar los valores, pero los predeterminados funcionan para el desarrollo local.
-    - Para producción, crearías un archivo `.env.production` con los valores correspondientes.
+    - El proyecto incluye un archivo `backend/.env.development` con valores predeterminados para el desarrollo local. Asegúrate de que este archivo contenga las variables necesarias, como `JWT_SECRET` y `CORS_ORIGIN`.
 
 4.  **Inicia el servidor en modo de desarrollo**:
     ```bash
     npm run start:dev
     ```
+    > **Nota:** Este es el único comando que necesitas para el desarrollo del backend. Se encarga de compilar el código y reiniciar el servidor automáticamente cuando detecta cambios. No es necesario ejecutar `npm run build`.
 
 El backend ahora estará en funcionamiento en la URL configurada en tu archivo `.env.development` (por defecto, `http://localhost:3001`).
 
