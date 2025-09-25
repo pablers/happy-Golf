@@ -39,6 +39,8 @@ const defaultPars = [4, 5, 4, 3, 4, 5, 4, 3, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4];
 const strokeIndexes = [9, 1, 13, 17, 5, 3, 11, 15, 7, 8, 2, 12, 16, 4, 6, 10, 14, 18];
 
 
+import { UserProfile } from './types';
+
 export const INITIAL_HOLE_SCORES: HoleScore[] = defaultPars.map((par, index) => ({
   hole: index + 1,
   par: par,
@@ -48,3 +50,17 @@ export const INITIAL_HOLE_SCORES: HoleScore[] = defaultPars.map((par, index) => 
   comment: null,
   fairwayHit: null,
 }));
+
+export const GUEST_PROFILE: UserProfile = {
+  name: 'Invitado',
+  hcpHistory: [
+    { date: new Date('2025-09-11').toISOString(), hcp: 23.2 },
+    { date: new Date('2025-06-25').toISOString(), hcp: 26.7 },
+    { date: new Date('2025-04-27').toISOString(), hcp: 30.8 },
+    { date: new Date('2025-04-12').toISOString(), hcp: 29.7 },
+    { date: new Date('2025-02-05').toISOString(), hcp: 32.3 },
+    { date: new Date('2025-01-01').toISOString(), hcp: 36.0 },
+  ],
+  favoriteCourseIds: [],
+  trainingObjective: 'recommended',
+};
