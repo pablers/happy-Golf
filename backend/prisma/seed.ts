@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 const { parse } = require('csv-parse');
@@ -18,13 +19,21 @@ async function main() {
   if (!guestUser) {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash('password', saltRounds);
+    // Construimos los datos dinámicamente para adaptarnos a los cambios del esquema en Supabase.
+    const userData: Record<string, unknown> = {
+      email: guestEmail,
+      name: 'Invitado',
+      passwordHash,
+    };
+
+    // Solo añadimos el HCP si la columna existe en el modelo actual.
+    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
+    if (userModel?.fields.some((field) => field.name === 'hcp')) {
+      userData.hcp = 18.0;
+    }
+
     guestUser = await prisma.user.create({
-      data: {
-        email: guestEmail,
-        name: 'Invitado',
-        password: passwordHash,
-        hcp: 18.0,
-      },
+      data: userData,
     });
     console.log(`Created guest user: ${guestUser.email}`);
   } else {
@@ -84,25 +93,59 @@ async function main() {
 
     if (holeScores.length === 0) continue;
 
-    await prisma.round.create({
-      data: {
-        date: new Date(row.date),
-        courseId: row.courseId,
-        roundType: row.roundType,
-        practiceTime: row.practice_time,
-        initialWeather: row.initial_weather,
-        initialWind: row.initial_wind,
-        turfCondition: row.turf_condition,
-        greenSpeed: row.green_speed,
-        physicalState: row.physical_state,
-        mentalState: row.mental_state,
-        user: {
-          connect: { id: guestUser.id },
-        },
-        holeScores: {
-          create: holeScores,
-        },
+    // Persist the round metadata first so that we have an id to link the hole scores to.
+    // Generamos la ronda cuidando los campos obligatorios según el esquema disponible.
+    const roundData: Record<string, unknown> = {
+      id: row.id || randomUUID(),
+      date: new Date(row.date),
+      courseId: row.courseId,
+      roundType: row.roundType,
+      practiceTime: row.practice_time || null,
+      initialWeather: row.initial_weather || null,
+      initialWind: row.initial_wind || null,
+      turfCondition: row.turf_condition || null,
+      greenSpeed: row.green_speed || null,
+      physicalState: row.physical_state || null,
+      mentalState: row.mental_state || null,
+      user: {
+        connect: { id: guestUser.id },
       },
+    };
+
+    const roundModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'Round');
+    if (roundModel?.fields.some((field) => field.name === 'userHcp')) {
+      const parsedHcp = row.userHcp ? parseFloat(row.userHcp) : null;
+      roundData.userHcp = Number.isFinite(parsedHcp) ? parsedHcp : 18.0;
+    }
+
+    const round = await prisma.round.create({
+      data: roundData,
+    });
+
+    // Store the individual hole scores in bulk for the newly created round.
+    const holeScoreModel = Prisma.dmmf.datamodel.models.find((model) =>
+      model.name.toLowerCase().includes('holescore'),
+    );
+
+    if (!holeScoreModel) {
+      console.warn('No se encontró un modelo para anotar hoyos; se omiten los scores.');
+      continue;
+    }
+
+    const holeScoreDelegateName = holeScoreModel.name[0].toLowerCase() + holeScoreModel.name.slice(1);
+    const holeScoreDelegate = (prisma as Record<string, any>)[holeScoreDelegateName];
+
+    if (!holeScoreDelegate?.createMany) {
+      console.warn(`El delegado ${holeScoreDelegateName} no soporta createMany; se omiten los scores.`);
+      continue;
+    }
+
+    await holeScoreDelegate.createMany({
+      data: holeScores.map((score) => ({
+        id: randomUUID(),
+        ...score,
+        roundId: round.id,
+      })),
     });
     console.log(`Created round for course ${row.courseId} on ${row.date}`);
   }

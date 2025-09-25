@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -24,13 +24,19 @@ export class UsersService {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
     
+    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
+    const userData: Record<string, unknown> = {
+      email,
+      passwordHash,
+      name,
+    };
+
+    if (userModel?.fields.some((field) => field.name === 'hcp')) {
+      userData.hcp = 18.0; // Default HCP solo si la columna existe.
+    }
+
     return this.prisma.user.create({
-      data: {
-        email,
-        password: passwordHash,
-        name,
-        hcp: 18.0, // Default HCP
-      },
+      data: userData,
     });
   }
 
@@ -40,11 +46,22 @@ export class UsersService {
           throw new NotFoundException('User not found');
       }
 
-      const { id, email, password, createdAt, updatedAt, ...restOfProfileData } = profileData;
+    const { id, email, passwordHash, createdAt, updatedAt, ...restOfProfileData } = profileData;
 
-      return this.prisma.user.update({
-          where: { id: userId },
-          data: restOfProfileData,
-      });
+    const userModel = Prisma.dmmf.datamodel.models.find((model) => model.name === 'User');
+    const editableFields = new Set(
+      userModel?.fields
+        .map((field) => field.name)
+        .filter((fieldName) => !['id', 'email', 'passwordHash', 'createdAt', 'updatedAt'].includes(fieldName)) ?? [],
+    );
+
+    const sanitizedProfileData = Object.fromEntries(
+      Object.entries(restOfProfileData).filter(([key]) => editableFields.has(key)),
+    );
+
+    return this.prisma.user.update({
+        where: { id: userId },
+        data: sanitizedProfileData,
+    });
   }
 }
