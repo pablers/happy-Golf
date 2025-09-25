@@ -16,13 +16,14 @@ async function main() {
   });
 
   if (!guestUser) {
+    // Hash the default seed password so we never store plain text credentials
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash('password', saltRounds);
     guestUser = await prisma.user.create({
       data: {
         email: guestEmail,
         name: 'Invitado',
-        password: passwordHash,
+        passwordHash,
         hcp: 18.0,
       },
     });
@@ -68,7 +69,14 @@ async function main() {
   });
 
   for await (const row of parser) {
-    const holeScores = [];
+    // Build the per-hole score payload based on the CSV columns
+    const holeScores = [] as Array<{
+      hole: number;
+      strokes: number;
+      putts: number;
+      fairwayHit: boolean | null;
+      comment: string | null;
+    }>;
     for (let i = 1; i <= 18; i++) {
       const strokes = row[`h${i}_strokes`] ? parseInt(row[`h${i}_strokes`], 10) : null;
       if (strokes !== null) {
@@ -84,25 +92,34 @@ async function main() {
 
     if (holeScores.length === 0) continue;
 
-    await prisma.round.create({
-      data: {
-        date: new Date(row.date),
-        courseId: row.courseId,
-        roundType: row.roundType,
-        practiceTime: row.practice_time,
-        initialWeather: row.initial_weather,
-        initialWind: row.initial_wind,
-        turfCondition: row.turf_condition,
-        greenSpeed: row.green_speed,
-        physicalState: row.physical_state,
-        mentalState: row.mental_state,
-        user: {
-          connect: { id: guestUser.id },
+    // Persist the round and the scores inside a transaction to keep them in sync
+    await prisma.$transaction(async (tx) => {
+      const round = await tx.round.create({
+        data: {
+          date: new Date(row.date),
+          courseId: row.courseId,
+          roundType: row.roundType,
+          practiceTime: row.practice_time,
+          initialWeather: row.initial_weather,
+          initialWind: row.initial_wind,
+          turfCondition: row.turf_condition,
+          greenSpeed: row.green_speed,
+          physicalState: row.physical_state,
+          mentalState: row.mental_state,
+          user: {
+            connect: { id: guestUser.id },
+          },
         },
-        holeScores: {
-          create: holeScores,
-        },
-      },
+      });
+
+      if (holeScores.length > 0) {
+        await tx.holeScore.createMany({
+          data: holeScores.map((score) => ({
+            ...score,
+            roundId: round.id,
+          })),
+        });
+      }
     });
     console.log(`Created round for course ${row.courseId} on ${row.date}`);
   }

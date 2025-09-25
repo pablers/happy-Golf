@@ -10,20 +10,20 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getProfile(@Request() req): Promise<Omit<User, 'password'>> {
+  async getProfile(@Request() req): Promise<Omit<User, 'passwordHash'>> {
     const user = await this.usersService.findOneById(req.user.userId);
     if (!user) {
         throw new NotFoundException('User not found');
     }
-    const { password, ...result } = user;
+    const { passwordHash, ...result } = user;
     return result;
   }
 
   @UseGuards(JwtAuthGuard)
   @Put()
-  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto): Promise<Omit<User, 'password'>> {
+  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto): Promise<Omit<User, 'passwordHash'>> {
     const updatedUser = await this.usersService.updateProfile(req.user.userId, updateProfileDto);
-    const { password, ...result } = updatedUser;
+    const { passwordHash, ...result } = updatedUser;
     return result;
   }
 }

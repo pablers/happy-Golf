@@ -11,10 +11,11 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<Omit<User, 'password'>> {
+  async validateUser(email: string, pass: string): Promise<Omit<User, 'passwordHash'>> {
     const user = await this.usersService.findOneByEmail(email);
-    if (user && (await bcrypt.compare(pass, user.password))) {
-      const { password, ...result } = user;
+    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
+      // Strip sensitive hash information before returning the user payload
+      const { passwordHash, ...result } = user;
       return result;
     }
     return null;
@@ -37,7 +38,8 @@ export class AuthService {
     try {
       const newUser = await this.usersService.create(email, pass, name);
       const payload = { sub: newUser.id, email: newUser.email };
-      const { password, ...profile } = newUser;
+      // Never leak password hashes back to API consumers
+      const { passwordHash, ...profile } = newUser;
       return {
         access_token: this.jwtService.sign(payload),
         profile: profile,
