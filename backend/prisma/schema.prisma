@@ -12,14 +12,13 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String?
-  passwordHash    String    @map("password")
-  hcp             Float?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  rounds          Round[]
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String    @map("password")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  rounds       Round[]
 }
 
 model Round {
@@ -34,6 +33,7 @@ model Round {
   greenSpeed        String?
   physicalState     String?
   mentalState       String?
+  userHcp           Float?    @map("user_hcp")
 
   user              User      @relation(fields: [userId], references: [id])
   userId            String
