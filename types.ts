@@ -129,8 +129,6 @@ export interface SavedRoundAnalysis {
 
 
 export type Theme = 'light' | 'dark';
-export type View = 'metronome' | 'newRound' | 'profile' | 'analysis' | 'settings' | 'trainingGuide' | 'clubhouse';
-
 export type SkillLevel = 'principiante' | 'intermedio' | 'avanzado';
 
 export interface TrainingStep {
