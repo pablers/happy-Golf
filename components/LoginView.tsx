@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { api } from '../services/api';
-import type { UserProfile } from '../types';
 import { GolfBallIcon, SpinnerIcon } from './icons';
 
 interface LoginViewProps {
-  onLoginSuccess: (token: string, profile: UserProfile) => void;
+  onLogin: (email: string, password: string) => Promise<void>;
+  onRegister: (email: string, password: string, name: string) => Promise<void>;
   onSkip: () => void;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onSkip }) => {
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, onRegister, onSkip }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,10 +22,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onSkip }) => {
 
     try {
       if (isLogin) {
-        const { access_token, profile } = await api.login(email, password);
-        onLoginSuccess(access_token, profile);
+        await onLogin(email, password);
       } else {
-        const { access_token, profile } = await api.register(email, password, name);
+        await onRegister(email, password, name);
         alert('Registro exitoso. Ahora puedes iniciar sesión.');
         // Switch to login view after successful registration
         setIsLogin(true);
