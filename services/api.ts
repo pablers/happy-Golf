@@ -93,9 +93,6 @@ export const api = {
         Authorization: `Bearer ${token}`,
       },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'An API error occurred');
-    }
+    await handleResponse(response);
   },
 };

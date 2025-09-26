@@ -1,14 +1,13 @@
 import React from 'react';
 import type { Theme } from '../types';
-import { SettingsIcon, SunIcon, MoonIcon, TrashIcon } from './icons';
+import { SettingsIcon, SunIcon, MoonIcon } from './icons';
 
 interface SettingsViewProps {
   currentTheme: Theme;
   onSetTheme: (theme: Theme) => void;
-  onClearRounds: () => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ currentTheme, onSetTheme, onClearRounds }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ currentTheme, onSetTheme }) => {
   return (
     <div className="w-full flex-grow flex flex-col p-6 bg-gray-50 dark:bg-gray-900/50 overflow-y-auto">
       <header className="text-center mb-8">
@@ -47,26 +46,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ currentTheme, onSetTheme, o
               Oscuro
             </button>
           </div>
-        </section>
-
-        {/* Data Management */}
-        <section>
-           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Gestión de Datos</h2>
-           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Limpiar Historial</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Borra permanentemente todas las rondas guardadas.</p>
-                    </div>
-                    <button
-                        onClick={onClearRounds}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                        <TrashIcon className="w-5 h-5" />
-                        Borrar
-                    </button>
-                </div>
-           </div>
         </section>
       </main>
     </div>
