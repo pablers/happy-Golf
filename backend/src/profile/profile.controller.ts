@@ -22,6 +22,7 @@ export class ProfileController {
   @UseGuards(JwtAuthGuard)
   @Put()
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
-    return this.usersService.updateProfile(req.user.userId, updateProfileDto);
+    const updatedUser = await this.usersService.updateProfile(req.user.userId, updateProfileDto);
+    return updatedUser.profile;
   }
 }

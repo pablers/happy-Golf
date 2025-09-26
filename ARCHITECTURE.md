@@ -20,24 +20,24 @@ El frontend está ubicado en la raíz del proyecto.
 ### Estructura de Directorios Clave
 
 -   `components/`: Contiene todos los componentes de React reutilizables (`Header`, `Scorecard`, `ClubSelector`, etc.). Están diseñados para ser modulares y, en su mayoría, centrados en la UI.
--   `contexts/`: Contiene los contextos de React que gestionan el estado global, como `AuthContext` para la autenticación y `RoundsContext` para los datos de las rondas.
 -   `services/`: Módulos responsables de la comunicación con servicios externos.
-    -   `api.ts`: Centraliza toda la lógica para hacer peticiones a la API del backend (login, registro, perfiles, rondas).
+    -   `api.ts`: Centraliza toda la lógica para hacer peticiones a la API del backend (login, registro, perfiles).
     -   `audioService.ts`: Lógica para generar y procesar audio con la Web Audio API.
+    -   `roundImporter.ts`: Lógica para cargar y parsear datos de rondas desde un archivo CSV local.
 -   `hooks/`: Contiene hooks de React personalizados para encapsular lógica compleja, como `useMetronome.ts`.
 -   `data/`: Almacena datos estáticos de la aplicación, como la configuración de los palos (`clubset.ts`), información de los campos de golf (`courses.ts`), y las preguntas del cuestionario (`questionnaireData.ts`).
--   `App.tsx`: Es el componente raíz que envuelve la aplicación con los proveedores de contexto y define el enrutamiento.
+-   `App.tsx`: Es el componente raíz que gestiona el estado principal de la aplicación, la autenticación y el enrutamiento entre las diferentes vistas.
 -   `index.tsx`: El punto de entrada de la aplicación React.
 -   `vite.config.ts`: Archivo de configuración para Vite, el empaquetador y servidor de desarrollo.
 
 ### Flujo de Datos y Estado
 
--   **Gestión de Estado**: El estado se gestiona a través de Contextos de React. `AuthContext` maneja la sesión del usuario (token y perfil), mientras que `RoundsContext` se encarga de obtener, crear, actualizar y eliminar las rondas de golf a través de la API del backend.
+-   **Gestión de Estado**: El estado principal (vista activa, perfil de usuario, datos de la ronda actual) se gestiona en el componente `App.tsx` a través de los hooks `useState` y `useEffect` de React.
 -   **Persistencia Local**:
     -   El token de autenticación se guarda en `localStorage`.
+    -   Las rondas de golf completadas por el usuario se guardan en `localStorage` para persistir entre sesiones.
     -   La configuración del tema (claro/oscuro) también se guarda en `localStorage`.
-    -   Los datos de rondas y perfiles de usuario ya no se guardan localmente; se obtienen directamente del backend.
--   **Datos Externos**: Todos los datos dinámicos (perfiles, rondas, etc.) se obtienen del backend a través del servicio `api.ts`. Ya no se carga ningún dato desde archivos CSV en el cliente.
+-   **Datos Externos**: La aplicación carga un historial de rondas desde un archivo `registro-partidas.csv` ubicado en `data/`. Estos datos se combinan con las rondas guardadas localmente.
 
 ---
 
@@ -50,19 +50,21 @@ El backend está ubicado en el directorio `backend/`.
 -   `src/`: Contiene todo el código fuente del backend.
     -   `main.ts`: El punto de entrada de la aplicación NestJS. Aquí se inicia el servidor.
     -   `app.module.ts`: El módulo raíz que importa y configura los demás módulos de la aplicación.
-    -   `prisma/`: Contiene el `PrismaService` para la interacción con la base de datos y el `PrismaModule`.
-    -   `auth/`: Módulo de NestJS que encapsula toda la lógica de autenticación (login, registro, estrategias JWT).
-    -   `profile/`: Módulo para gestionar los perfiles de usuario (obtener y actualizar).
-    -   `users/`: Módulo para la gestión de usuarios, principalmente para dar soporte a la autenticación y la creación de perfiles.
-    -   `rounds/`: Nuevo módulo que contiene el `RoundsController` y `RoundsService` para gestionar las operaciones CRUD de las rondas de golf.
--   `prisma/`: Contiene el esquema de la base de datos (`schema.prisma`) y el script de migración (`seed.ts`).
--   `.env`: Archivo de configuración para las variables de entorno, incluyendo la cadena de conexión a la base de datos.
+    -   `auth/`: Módulo de NestJS que encapsula toda la lógica de autenticación.
+        -   `auth.controller.ts`: Define las rutas para el login y el registro (`/auth/login`, `/auth/register`).
+        -   `auth.service.ts`: Contiene la lógica para validar usuarios y firmar tokens JWT.
+        -   `strategies/`: Implementaciones de estrategias de Passport.js (JWT y local).
+        -   `guards/`: Guards para proteger rutas que requieren autenticación.
+    -   `profile/`: Módulo para gestionar los perfiles de usuario.
+        -   `profile.controller.ts`: Define las rutas para obtener y actualizar el perfil (`/profile`).
+        -   (No hay `profile.service.ts`, la lógica está en el controlador, lo cual es un área de mejora).
+    -   `users/`: Módulo para la gestión de usuarios (aunque principalmente proporciona un `users.service` para la autenticación).
+-   `.env.development` / `.env.production`: Archivos de configuración para las variables de entorno.
 -   `nest-cli.json`: Archivo de configuración para el CLI de NestJS.
 -   `package.json`: Define las dependencias y scripts del backend.
 
 ### Flujo de Datos y Lógica de Negocio
 
 -   **Autenticación**: Utiliza un sistema basado en JSON Web Tokens (JWT). El usuario envía sus credenciales, y si son válidas, el servidor devuelve un JWT que el cliente debe incluir en las cabeceras de las peticiones a rutas protegidas.
--   **Gestión de Perfiles y Rondas**: Proporciona endpoints RESTful para que un usuario autenticado pueda gestionar su perfil y sus rondas de golf.
--   **Persistencia**: La aplicación ahora utiliza una base de datos PostgreSQL para persistir todos los datos de usuarios, perfiles y rondas. La interacción con la base de datos se gestiona a través del ORM Prisma. Los datos ya no se almacenan en memoria, garantizando la persistencia entre reinicios del servidor.
--   **Migración de Datos**: Se incluye un script de `seed` en `prisma/seed.ts` que lee los datos históricos del archivo `registro-partidas.csv` y los campos de golf de `data/courses.ts` para poblar la base de datos inicial. Este script se puede ejecutar con `npm run seed`.
+-   **Gestión de Perfiles**: Proporciona endpoints para que un usuario autenticado pueda obtener y actualizar su información de perfil (HCP, campo favorito, etc.).
+-   **Persistencia**: El código actual no incluye una conexión a una base de datos. El `users.service` utiliza una lista de usuarios en memoria, lo que significa que los datos se pierden si el servidor se reinicia. Esta es una de las principales áreas de mejora.

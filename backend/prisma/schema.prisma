@@ -24,7 +24,7 @@ model Profile {
   id                String      @id @default(cuid())
   name              String
   trainingObjective String?
-  user              User        @relation(fields: [userId], references: [id])
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId            String      @unique
   hcpHistory        HcpRecord[]
   favoriteCourses   GolfCourse[] @relation("FavoriteCourses")
@@ -34,7 +34,7 @@ model HcpRecord {
   id        String   @id @default(cuid())
   date      DateTime
   hcp       Float
-  profile   Profile  @relation(fields: [profileId], references: [id])
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   profileId String
 }
 
@@ -45,7 +45,7 @@ model Round {
   practiceTime PracticeTime
   weather      WeatherCondition
   wind         WindCondition
-  user         User      @relation(fields: [userId], references: [id])
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId       String
   course       GolfCourse @relation(fields: [courseId], references: [id])
   courseId     String
@@ -85,28 +85,28 @@ model HoleScore {
 }
 
 enum RoundType {
-  front
-  back
-  full
+  FRONT
+  BACK
+  FULL
 }
 
 enum PracticeTime {
-  none
-  min5
-  min5_15
-  min15plus
+  NONE
+  MIN_5
+  MIN_5_15
+  MIN_15_PLUS
 }
 
 enum WeatherCondition {
-  sunny
-  cloudy
-  rainy
-  variable
+  SUNNY
+  CLOUDY
+  RAINY
+  VARIABLE
 }
 
 enum WindCondition {
-  none
-  light
-  moderate
-  strong
+  NONE
+  LIGHT
+  MODERATE
+  STRONG
 }

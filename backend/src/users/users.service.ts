@@ -8,7 +8,7 @@ import { UserProfile as UserProfileDto } from './user.interface';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findOneByEmail(email: string): Promise<(User & { profile: Profile | null }) | undefined> {
+  async findOneByEmail(email: string): Promise<(User & { profile: Profile | null }) | null> {
     return this.prisma.user.findUnique({
       where: { email },
       include: { profile: true },
@@ -20,13 +20,13 @@ export class UsersService {
       where: { id },
       include: { profile: true },
     });
-    if (!user) {
-      throw new NotFoundException('User not found');
+    if (!user || !user.profile) {
+      throw new NotFoundException('User or profile not found');
     }
-    return user;
+    return user as User & { profile: Profile };
   }
 
-  async create(email: string, password: string, name: string): Promise<User> {
+  async create(email: string, password: string, name: string): Promise<User & { profile: Profile }> {
     const existingUser = await this.findOneByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
@@ -35,7 +35,7 @@ export class UsersService {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -56,16 +56,13 @@ export class UsersService {
         profile: true,
       },
     });
+    return user as User & { profile: Profile };
   }
 
   async updateProfile(userId: string, profileData: UserProfileDto): Promise<Profile> {
       const user = await this.findOneById(userId);
-      if (!user.profile) {
-          throw new NotFoundException('Profile not found for this user');
-      }
+      // findOneById already ensures the profile exists.
 
-      // We only update fields that are part of the profile model.
-      // hcpHistory and favoriteCourseIds are handled separately.
       return this.prisma.profile.update({
           where: { id: user.profile.id },
           data: {

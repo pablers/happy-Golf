@@ -94,8 +94,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ course, roundType, practiceTime, 
     const visibleHoles = useMemo(() => {
         if (!activePlayer) return [];
         switch (roundType) {
-            case 'front': return activePlayer.scores.slice(0, 9);
-            case 'back': return activePlayer.scores.slice(9, 18);
+            case 'FRONT': return activePlayer.scores.slice(0, 9);
+            case 'BACK': return activePlayer.scores.slice(9, 18);
             default: return activePlayer.scores;
         }
     }, [activePlayer, roundType]);
@@ -328,11 +328,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ course, roundType, practiceTime, 
         const newAnswers = { ...answers, [key]: value };
         setAnswers(newAnswers);
         setCurrentQuestion(null);
-    };
-    
-    const handleReviewSave = (newAnswers: Partial<PostRoundAnswers>) => {
-        setAnswers(newAnswers);
-        setIsReviewModalOpen(false);
     };
     
     const performSave = () => {

@@ -3,10 +3,13 @@ import type { UserProfile, SavedRound, CreateRoundPayload } from '../types';
 const API_BASE_URL = 'http://localhost:3001/api'; // The backend will run on port 3001
 
 const handleResponse = async (response: Response) => {
+  if (response.status === 204) { // No Content
+    return;
+  }
   if (response.ok) {
     return response.json();
   }
-  const errorData = await response.json();
+  const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred' }));
   throw new Error(errorData.message || 'An API error occurred');
 };
 
