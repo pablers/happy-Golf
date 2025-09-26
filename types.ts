@@ -1,3 +1,5 @@
+
+
 export interface ClubTempoConfig {
   id: string;
   name: string;
@@ -26,10 +28,18 @@ export interface GolfCourse {
   longitude: string | null;
 }
 
-export type RoundType = 'FRONT' | 'BACK' | 'FULL';
-export type PracticeTime = 'NONE' | 'MIN_5' | 'MIN_5_15' | 'MIN_15_PLUS';
-export type WeatherCondition = 'SUNNY' | 'CLOUDY' | 'RAINY' | 'VARIABLE';
-export type WindCondition = 'NONE' | 'LIGHT' | 'MODERATE' | 'STRONG';
+export type RoundType = 'front' | 'back' | 'full';
+export type PracticeTime = 'none' | '5min' | '5-15min' | '15+min';
+export type WeatherCondition = 'sunny' | 'cloudy' | 'rainy' | 'variable';
+export type WindCondition = 'none' | 'light' | 'moderate' | 'strong';
+
+export interface ScorecardSessionSetup {
+  course: GolfCourse;
+  roundType: RoundType;
+  practiceTime: PracticeTime;
+  weather: WeatherCondition;
+  wind: WindCondition;
+}
 
 export interface HoleScore {
   hole: number;
@@ -100,30 +110,13 @@ export interface UserProfile {
   trainingObjective: string;
 }
 
-// This represents a round received from the backend
 export interface SavedRound {
     id: string;
     date: string;
-    roundType: RoundType;
-    practiceTime: PracticeTime;
-    weather: WeatherCondition;
-    wind: WindCondition;
-    courseId: string;
+    setup: ScorecardSessionSetup;
     scores: HoleScore[];
     answers: Partial<PostRoundAnswers>;
-    course: GolfCourse; // Included from the backend
-}
-
-// This is the payload for creating a new round
-export interface CreateRoundPayload {
-    date: string;
-    roundType: RoundType;
-    practiceTime: PracticeTime;
-    weather: WeatherCondition;
-    wind: WindCondition;
-    courseId: string;
-    scores: HoleScore[];
-    answers: Partial<PostRoundAnswers>;
+    userProfile: UserProfile;
 }
 
 export interface SavedRoundAnalysis {

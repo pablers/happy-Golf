@@ -39,13 +39,13 @@ const RoundTypeSetup: React.FC<RoundTypeSetupProps> = ({ course, onContinue, onB
       </header>
 
       <main className="space-y-4 flex-grow">
-        <RoundButton onClick={() => setSelectedRoundType('FRONT')} isActive={selectedRoundType === 'FRONT'}>
+        <RoundButton onClick={() => setSelectedRoundType('front')} isActive={selectedRoundType === 'front'}>
           Primeros 9 (1-9)
         </RoundButton>
-        <RoundButton onClick={() => setSelectedRoundType('BACK')} isActive={selectedRoundType === 'BACK'}>
+        <RoundButton onClick={() => setSelectedRoundType('back')} isActive={selectedRoundType === 'back'}>
           Segundos 9 (10-18)
         </RoundButton>
-        <RoundButton onClick={() => setSelectedRoundType('FULL')} isActive={selectedRoundType === 'FULL'}>
+        <RoundButton onClick={() => setSelectedRoundType('full')} isActive={selectedRoundType === 'full'}>
           18 Hoyos
         </RoundButton>
       </main>

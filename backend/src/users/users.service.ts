@@ -1,74 +1,61 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
-import { User, Profile } from '@prisma/client';
-import { UserProfile as UserProfileDto } from './user.interface';
+import { UserProfile } from './user.interface';
+
+// This is a mock user type for our in-memory database
+export type User = {
+    id: number;
+    email: string;
+    passwordHash: string;
+    profile: UserProfile;
+};
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  private readonly users: User[] = [];
 
-  async findOneByEmail(email: string): Promise<(User & { profile: Profile | null }) | null> {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { profile: true },
-    });
+  constructor() {
+    // Pre-seed a user for easy testing
+    this.create('pablo@test.com', 'password123', 'Pablo Reina').catch(console.error);
+  }
+
+  async findOneByEmail(email: string): Promise<User | undefined> {
+    return this.users.find(user => user.email === email);
   }
   
-  async findOneById(id: string): Promise<User & { profile: Profile }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: { profile: true },
-    });
-    if (!user || !user.profile) {
-      throw new NotFoundException('User or profile not found');
-    }
-    return user as User & { profile: Profile };
+  async findOneById(id: number): Promise<User | undefined> {
+    return this.users.find(user => user.id === id);
   }
 
-  async create(email: string, password: string, name: string): Promise<User & { profile: Profile }> {
-    const existingUser = await this.findOneByEmail(email);
-    if (existingUser) {
+  async create(email: string, password: string, name: string): Promise<User> {
+    if (this.users.some(user => user.email === email)) {
       throw new ConflictException('User with this email already exists');
     }
 
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const passwordHash = await bcrypt.hash(password, saltRounds);
     
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        profile: {
-          create: {
-            name,
-            trainingObjective: 'recommended',
-            hcpHistory: {
-              create: {
-                date: new Date(),
-                hcp: 18.0,
-              },
-            },
-          },
-        },
+    const newUser: User = {
+      id: this.users.length + 1,
+      email,
+      passwordHash,
+      profile: {
+        name,
+        hcpHistory: [{ date: new Date().toISOString(), hcp: 18.0 }], // Default HCP history
+        favoriteCourseIds: [],
+        trainingObjective: 'recommended',
       },
-      include: {
-        profile: true,
-      },
-    });
-    return user as User & { profile: Profile };
+    };
+    this.users.push(newUser);
+    return newUser;
   }
 
-  async updateProfile(userId: string, profileData: UserProfileDto): Promise<Profile> {
-      const user = await this.findOneById(userId);
-      // findOneById already ensures the profile exists.
-
-      return this.prisma.profile.update({
-          where: { id: user.profile.id },
-          data: {
-              name: profileData.name,
-              trainingObjective: profileData.trainingObjective,
-          },
-      });
+  async updateProfile(userId: number, profileData: UserProfile): Promise<User> {
+      const userIndex = this.users.findIndex(user => user.id === userId);
+      if (userIndex === -1) {
+          throw new Error('User not found');
+      }
+      this.users[userIndex].profile = profileData;
+      return this.users[userIndex];
   }
 }

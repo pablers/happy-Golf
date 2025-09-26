@@ -1,63 +1,65 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
-import { SavedRound, CreateRoundPayload } from '../types';
-import { api } from '../services/api';
-import { useAuth } from './AuthContext';
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { SavedRound } from '../types';
+import { fetchAndParseRounds } from '../services/roundImporter';
+
+const SAVED_ROUNDS_STORAGE_KEY = 'golf-saved-rounds';
 
 interface RoundsContextType {
   savedRounds: SavedRound[];
   isLoading: boolean;
-  createRound: (roundData: CreateRoundPayload) => Promise<void>;
-  updateRound: (roundId: string, roundData: Partial<SavedRound>) => Promise<void>;
-  deleteRound: (roundId: string) => Promise<void>;
+  saveRound: (round: SavedRound) => void;
+  clearRounds: () => void;
   getRoundById: (roundId: string) => SavedRound | undefined;
 }
 
 const RoundsContext = createContext<RoundsContextType | undefined>(undefined);
 
 export const RoundsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { token } = useAuth();
   const [savedRounds, setSavedRounds] = useState<SavedRound[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchRounds = useCallback(async () => {
-    if (!token) {
-      setSavedRounds([]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const rounds = await api.getRounds(token);
-      rounds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setSavedRounds(rounds);
-    } catch (error) {
-      console.error("Failed to load round data:", error);
-      setSavedRounds([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
-
   useEffect(() => {
-    fetchRounds();
-  }, [fetchRounds]);
+    const loadRoundData = async () => {
+      setIsLoading(true);
+      try {
+        const roundsFromCSV = await fetchAndParseRounds();
+        const localRoundsData = localStorage.getItem(SAVED_ROUNDS_STORAGE_KEY);
 
-  const createRound = async (roundData: CreateRoundPayload) => {
-    if (!token) throw new Error("Authentication required");
-    const newRound = await api.createRound(token, roundData);
-    setSavedRounds(prevRounds => [newRound, ...prevRounds].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        if (localRoundsData) {
+          const localRounds: SavedRound[] = JSON.parse(localRoundsData);
+          const localRoundIds = new Set(localRounds.map(r => r.id));
+          const filteredCsvRounds = roundsFromCSV.filter(r => !localRoundIds.has(r.id));
+          const allRounds = [...localRounds, ...filteredCsvRounds];
+          allRounds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setSavedRounds(allRounds);
+        } else {
+          const sortedRounds = roundsFromCSV.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setSavedRounds(sortedRounds);
+        }
+      } catch (error) {
+        console.error("Failed to load round data:", error);
+        setSavedRounds([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRoundData();
+  }, []);
+
+  const saveRound = (round: SavedRound) => {
+    const newSavedRounds = [round, ...savedRounds];
+    newSavedRounds.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setSavedRounds(newSavedRounds);
+    localStorage.setItem(SAVED_ROUNDS_STORAGE_KEY, JSON.stringify(newSavedRounds));
   };
 
-  const updateRound = async (roundId: string, roundData: Partial<SavedRound>) => {
-    if (!token) throw new Error("Authentication required");
-    const updatedRound = await api.updateRound(token, roundId, roundData);
-    setSavedRounds(prevRounds => prevRounds.map(r => r.id === roundId ? updatedRound : r));
-  };
-
-  const deleteRound = async (roundId: string) => {
-    if (!token) throw new Error("Authentication required");
-    await api.deleteRound(token, roundId);
-    setSavedRounds(prevRounds => prevRounds.filter(r => r.id !== roundId));
+  const clearRounds = () => {
+    if (window.confirm("¿Estás seguro de que quieres borrar todo tu historial de rondas? Esta acción no se puede deshacer.")) {
+      setSavedRounds([]);
+      localStorage.removeItem(SAVED_ROUNDS_STORAGE_KEY);
+      alert("Historial de rondas borrado.");
+    }
   };
 
   const getRoundById = (roundId: string) => {
@@ -67,9 +69,8 @@ export const RoundsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const value = {
     savedRounds,
     isLoading,
-    createRound,
-    updateRound,
-    deleteRound,
+    saveRound,
+    clearRounds,
     getRoundById,
   };
 

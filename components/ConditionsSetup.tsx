@@ -8,24 +8,24 @@ interface ConditionsSetupProps {
 }
 
 const practiceTimes: { id: PracticeTime; label: string }[] = [
-    { id: 'NONE', label: 'No' },
-    { id: 'MIN_5', label: '< 5 min' },
-    { id: 'MIN_5_15', label: '5-15 min' },
-    { id: 'MIN_15_PLUS', label: '+15 min' },
+    { id: 'none', label: 'No' },
+    { id: '5min', label: '< 5 min' },
+    { id: '5-15min', label: '5-15 min' },
+    { id: '15+min', label: '+15 min' },
 ];
 
 const weatherConditions: {id: WeatherCondition, label: string}[] = [
-    { id: 'SUNNY', label: 'Soleado' },
-    { id: 'CLOUDY', label: 'Nublado' },
-    { id: 'RAINY', label: 'Lluvioso' },
-    { id: 'VARIABLE', label: 'Variable' },
+    { id: 'sunny', label: 'Soleado' },
+    { id: 'cloudy', label: 'Nublado' },
+    { id: 'rainy', label: 'Lluvioso' },
+    { id: 'variable', label: 'Variable' },
 ];
 
 const windConditions: {id: WindCondition, label: string}[] = [
-    { id: 'NONE', label: 'Sin' },
-    { id: 'LIGHT', label: 'Suave' },
-    { id: 'MODERATE', label: 'Moderado' },
-    { id: 'STRONG', label: 'Fuerte' },
+    { id: 'none', label: 'Sin' },
+    { id: 'light', label: 'Suave' },
+    { id: 'moderate', label: 'Moderado' },
+    { id: 'strong', label: 'Fuerte' },
 ];
 
 const ConditionButton: React.FC<{
