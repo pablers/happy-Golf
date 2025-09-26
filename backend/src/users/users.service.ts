@@ -1,61 +1,77 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { UserProfile } from './user.interface';
-
-// This is a mock user type for our in-memory database
-export type User = {
-    id: number;
-    email: string;
-    passwordHash: string;
-    profile: UserProfile;
-};
+import { PrismaService } from '../prisma/prisma.service';
+import { User, Profile } from '@prisma/client';
+import { UserProfile as UserProfileDto } from './user.interface';
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [];
+  constructor(private prisma: PrismaService) {}
 
-  constructor() {
-    // Pre-seed a user for easy testing
-    this.create('pablo@test.com', 'password123', 'Pablo Reina').catch(console.error);
-  }
-
-  async findOneByEmail(email: string): Promise<User | undefined> {
-    return this.users.find(user => user.email === email);
+  async findOneByEmail(email: string): Promise<(User & { profile: Profile | null }) | undefined> {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { profile: true },
+    });
   }
   
-  async findOneById(id: number): Promise<User | undefined> {
-    return this.users.find(user => user.id === id);
+  async findOneById(id: string): Promise<User & { profile: Profile }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { profile: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   async create(email: string, password: string, name: string): Promise<User> {
-    if (this.users.some(user => user.email === email)) {
+    const existingUser = await this.findOneByEmail(email);
+    if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
     const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     
-    const newUser: User = {
-      id: this.users.length + 1,
-      email,
-      passwordHash,
-      profile: {
-        name,
-        hcpHistory: [{ date: new Date().toISOString(), hcp: 18.0 }], // Default HCP history
-        favoriteCourseIds: [],
-        trainingObjective: 'recommended',
+    return this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        profile: {
+          create: {
+            name,
+            trainingObjective: 'recommended',
+            hcpHistory: {
+              create: {
+                date: new Date(),
+                hcp: 18.0,
+              },
+            },
+          },
+        },
       },
-    };
-    this.users.push(newUser);
-    return newUser;
+      include: {
+        profile: true,
+      },
+    });
   }
 
-  async updateProfile(userId: number, profileData: UserProfile): Promise<User> {
-      const userIndex = this.users.findIndex(user => user.id === userId);
-      if (userIndex === -1) {
-          throw new Error('User not found');
+  async updateProfile(userId: string, profileData: UserProfileDto): Promise<Profile> {
+      const user = await this.findOneById(userId);
+      if (!user.profile) {
+          throw new NotFoundException('Profile not found for this user');
       }
-      this.users[userIndex].profile = profileData;
-      return this.users[userIndex];
+
+      // We only update fields that are part of the profile model.
+      // hcpHistory and favoriteCourseIds are handled separately.
+      return this.prisma.profile.update({
+          where: { id: user.profile.id },
+          data: {
+              name: profileData.name,
+              trainingObjective: profileData.trainingObjective,
+          },
+      });
   }
 }

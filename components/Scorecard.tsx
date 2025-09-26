@@ -1,18 +1,34 @@
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { INITIAL_HOLE_SCORES } from '../constants';
-import type { HoleScore, ScorecardSessionSetup, PostRoundAnswers, RoundState, QuestionCategory, Question, UserProfile, SavedRound, HcpRecord, ScorecardPlayer } from '../types';
+import type {
+    HoleScore,
+    PostRoundAnswers,
+    RoundState,
+    QuestionCategory,
+    Question,
+    UserProfile,
+    HcpRecord,
+    ScorecardPlayer,
+    GolfCourse,
+    RoundType,
+    PracticeTime,
+    WeatherCondition,
+    WindCondition,
+} from '../types';
 import { ALL_QUESTIONS } from '../data/questionnaireData';
 import { GoogleGenAI } from "@google/genai";
 import { SpinnerIcon, MicrophoneIcon, ChevronDownIcon, ChevronRightIcon, TargetIcon } from './icons';
 import QuestionnaireModal from './QuestionnaireModal';
 import ReviewQuestionsModal from './ReviewQuestionsModal';
 
-
 interface ScorecardProps {
-    setup: ScorecardSessionSetup;
+    course: GolfCourse;
+    roundType: RoundType;
+    practiceTime: PracticeTime;
+    weather: WeatherCondition;
+    wind: WindCondition;
     userProfile: UserProfile;
-    onSaveRound: (round: SavedRound) => void;
+    onSaveRound: (data: { scores: HoleScore[]; answers: Partial<PostRoundAnswers> }) => void;
 }
 
 const SESSION_STORAGE_KEY = 'golf-multiplayer-session-data';
@@ -22,7 +38,6 @@ const getLatestHcp = (history: HcpRecord[]): number => {
     const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return sortedHistory[0].hcp;
 };
-
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -47,7 +62,7 @@ const ScoreResult: React.FC<{ result: number | null }> = ({ result }) => {
     return <span className={`font-bold tabular-nums ${displayClass}`}>{displayText}</span>;
 }
 
-const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }) => {
+const Scorecard: React.FC<ScorecardProps> = ({ course, roundType, practiceTime, weather, wind, userProfile, onSaveRound }) => {
     const [players, setPlayers] = useState<ScorecardPlayer[]>([]);
     const [activePlayerIndex, setActivePlayerIndex] = useState(0);
     const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
@@ -63,7 +78,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
     const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-    // FIX: All hooks are moved before any potential early returns to ensure consistent call order.
     const ai = useMemo(() => {
         if (!process.env.API_KEY) return null;
         return new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -79,12 +93,12 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
 
     const visibleHoles = useMemo(() => {
         if (!activePlayer) return [];
-        switch (setup.roundType) {
+        switch (roundType) {
             case 'front': return activePlayer.scores.slice(0, 9);
             case 'back': return activePlayer.scores.slice(9, 18);
             default: return activePlayer.scores;
         }
-    }, [activePlayer, setup.roundType]);
+    }, [activePlayer, roundType]);
 
     const totals = useMemo(() => {
         if (!activePlayer) return { strokes: 0, putts: 0, score: 0, fairwaysHit: 0, fairwayOpportunities: 0 };
@@ -107,20 +121,20 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
     const saveSession = useCallback(() => {
         if (players.length === 0) return;
         const sessionData = {
-            setup,
+            courseId: course.id,
+            roundType,
             players,
             answers,
             roundState,
         };
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-    }, [setup, players, answers, roundState]);
+    }, [course, roundType, players, answers, roundState]);
 
-    // Initialize or load session
     useEffect(() => {
         try {
             const savedData = localStorage.getItem(SESSION_STORAGE_KEY);
             const savedSession = savedData ? JSON.parse(savedData) : null;
-            if (savedSession && savedSession.setup?.course.id === setup.course.id && savedSession.setup?.roundType === setup.roundType) {
+            if (savedSession && savedSession.courseId === course.id && savedSession.roundType === roundType) {
                 setPlayers(savedSession.players);
                 setAnswers(savedSession.answers || {});
                 setRoundState(savedSession.roundState || { cooldown: 0, pendingQuestions: [], askedThisHalf: {}, questionBudget: 3, patternsMetThisRound: [] });
@@ -133,19 +147,17 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
                 ];
                 setPlayers(initialPlayers);
                 setAnswers({
-                    practice_time: setup.practiceTime,
-                    initial_weather: setup.weather,
-                    initial_wind: setup.wind,
+                    practice_time: practiceTime,
+                    initial_weather: weather,
+                    initial_wind: wind,
                 });
                 setRoundState({ cooldown: 0, pendingQuestions: [], askedThisHalf: {}, questionBudget: 3, patternsMetThisRound: [] });
             }
         } catch (error) {
             console.error("Failed to load session data:", error);
-            // Fallback to fresh state
         }
-    }, [setup, userProfile]);
+    }, [course, roundType, practiceTime, weather, wind, userProfile]);
     
-    // Save session on any change
     useEffect(() => {
         saveSession();
     }, [saveSession]);
@@ -324,15 +336,12 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
     };
     
     const performSave = () => {
-        const userRoundData: SavedRound = {
-            id: `${setup.course.id}-${new Date().toISOString()}`,
-            date: new Date().toISOString(),
-            setup,
-            scores: players[0].scores,
-            answers,
-            userProfile,
-        };
-        onSaveRound(userRoundData);
+        if (players.length > 0) {
+            onSaveRound({
+                scores: players[0].scores,
+                answers,
+            });
+        }
     };
     
     const handleSaveRound = () => {
@@ -377,7 +386,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
                 roundState={roundState}
             />
             <header className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-3">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">{setup.course.name}</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">{course.name}</h1>
                 <div className="flex -mb-4 -mx-4 border-b border-gray-200 dark:border-gray-700">
                     {players.map((player, index) => (
                         <button 

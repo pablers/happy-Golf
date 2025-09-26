@@ -29,17 +29,9 @@ export interface GolfCourse {
 }
 
 export type RoundType = 'front' | 'back' | 'full';
-export type PracticeTime = 'none' | '5min' | '5-15min' | '15+min';
+export type PracticeTime = 'none' | 'min5' | 'min5_15' | 'min15plus';
 export type WeatherCondition = 'sunny' | 'cloudy' | 'rainy' | 'variable';
 export type WindCondition = 'none' | 'light' | 'moderate' | 'strong';
-
-export interface ScorecardSessionSetup {
-  course: GolfCourse;
-  roundType: RoundType;
-  practiceTime: PracticeTime;
-  weather: WeatherCondition;
-  wind: WindCondition;
-}
 
 export interface HoleScore {
   hole: number;
@@ -113,10 +105,25 @@ export interface UserProfile {
 export interface SavedRound {
     id: string;
     date: string;
-    setup: ScorecardSessionSetup;
+    roundType: RoundType;
+    practiceTime: PracticeTime;
+    weather: WeatherCondition;
+    wind: WindCondition;
+    courseId: string;
     scores: HoleScore[];
     answers: Partial<PostRoundAnswers>;
-    userProfile: UserProfile;
+    course: GolfCourse;
+}
+
+export interface CreateRoundPayload {
+    date: string;
+    roundType: RoundType;
+    practiceTime: PracticeTime;
+    weather: WeatherCondition;
+    wind: WindCondition;
+    courseId: string;
+    scores: HoleScore[];
+    answers: Partial<PostRoundAnswers>;
 }
 
 export interface SavedRoundAnalysis {
