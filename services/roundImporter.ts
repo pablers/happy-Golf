@@ -36,7 +36,7 @@ export const parseRoundsCSV = (csvText: string): SavedRound[] => {
 
         const answers: Partial<PostRoundAnswers> = {};
         const answerKeys: (keyof PostRoundAnswers)[] = [
-            'practice_time', 'initial_weather', 'initial_wind', 
+            'practice_time', 'initial_weather', 'initial_wind',
             'weather_h7_confirm', 'weather_h7_new', 'wind_h7_change',
             'weather_h15_confirm', 'weather_h15_new', 'wind_h15_change',
             'turf_condition', 'green_speed', 'physical_state', 'mental_state'

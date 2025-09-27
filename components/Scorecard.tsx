@@ -322,7 +322,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
         setAnswers(newAnswers);
         setIsReviewModalOpen(false);
     };
-    
+
     const performSave = () => {
         const userRoundData: SavedRound = {
             id: `${setup.course.id}-${new Date().toISOString()}`,
