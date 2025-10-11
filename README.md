@@ -73,4 +73,4 @@ Ahora, en una **nueva terminal**, inicia el servidor de desarrollo para el front
     npm run dev
     ```
 
-Vite iniciará el servidor de desarrollo (normalmente en `http://localhost:5173`) y abrirá la aplicación en tu navegador. Gracias al proxy configurado, todas las llamadas a `/api` se redirigen automáticamente al backend que se ejecute en la URL definida por `VITE_API_URL` (por defecto, `http://localhost:3001`).
+Vite iniciará el servidor de desarrollo (normalmente en `http://localhost:5173`) y abrirá la aplicación en tu navegador. Gracias al proxy configurado, todas las llamadas a `/api` se redirigen automáticamente al backend que se ejecute en la URL definida por `VITE_API_URL` (por defecto, `http://localhost:3001`). Si tu backend ya expone las rutas bajo el prefijo `/api` (como hace NestJS con `app.setGlobalPrefix('api')`), no es necesario reescribir la ruta en el proxy: bastará con usar el mismo prefijo en el frontend.

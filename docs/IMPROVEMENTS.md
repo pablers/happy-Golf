@@ -55,7 +55,6 @@ Durante el desarrollo, el frontend (que corre, por ejemplo, en `localhost:5173`)
             '/api': {
               target: apiProxyTarget,
               changeOrigin: true,
-              rewrite: (path) => path.replace(/^\/api/, ''),
             },
           },
         },
@@ -63,6 +62,7 @@ Durante el desarrollo, el frontend (que corre, por ejemplo, en `localhost:5173`)
     });
     ```
     Esto simplificaría el código de `services/api.ts` y eliminaría la necesidad de configuraciones de CORS complejas para el desarrollo.
+    Si tu backend aplica un prefijo global (por ejemplo, `app.setGlobalPrefix('api')` en NestJS), conserva el prefijo `/api` en el proxy para mantener alineadas las rutas.
 
 ## 4. Mejoras en el Backend
 

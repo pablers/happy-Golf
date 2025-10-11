@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
           '/api': {
             target: apiProxyTarget, // Redirige las peticiones de /api al backend configurado en la variable de entorno.
             changeOrigin: true, // Ajusta la cabecera Origin para evitar problemas de CORS durante el desarrollo.
-            rewrite: (path) => path.replace(/^\/api/, ''), // Elimina el prefijo /api antes de reenviar la solicitud al backend.
+            // Conservamos el prefijo /api porque el backend NestJS aplica el mismo prefijo global en sus rutas.
           },
         },
       }
