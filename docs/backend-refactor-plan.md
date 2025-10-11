@@ -25,10 +25,10 @@
 - **RoundsModule** (planeado para siguientes mejoras): alojará toda la lógica de rondas que actualmente vive en el frontend.
 
 ## Planificación por Iteraciones
-1. **Iteración 1 – Preparación**
+1. **Iteración 1 – Preparación** ✅ _Completada_
    - Introducir un `CoreModule` que provea servicios compartidos y registrar allí proveedores reutilizables.
    - Revisar dependencias actuales para identificar acoplamientos implícitos.
-2. **Iteración 2 – Refactor de Perfiles**
+2. **Iteración 2 – Refactor de Perfiles** ✅ _Completada_
    - Crear `ProfileService` y mover la lógica de negocio desde `profile.controller.ts`.
    - Actualizar pruebas o añadir nuevas que validen el servicio de forma aislada.
 3. **Iteración 3 – Aislar Usuarios y Autenticación**
