@@ -63,14 +63,14 @@ Ahora, en una **nueva terminal**, inicia el servidor de desarrollo para el front
     npm install
     ```
 
-3.  **Configura la Clave de API de Gemini**:
-    La funcionalidad de transcripción de audio requiere una clave de API de Google Gemini.
+3.  **Configura las Variables de Entorno del Frontend**:
     - Crea un archivo llamado `.env.local` en la raíz del proyecto (junto a `index.html`).
-    - Añade tu clave de API con el prefijo que espera Vite: `VITE_GEMINI_API_KEY=TU_CLAVE_DE_API_AQUI`
+    - Añade tu clave de API con el prefijo que espera Vite: `VITE_GEMINI_API_KEY=TU_CLAVE_DE_API_AQUI`.
+    - (Opcional) Define `VITE_API_URL=http://localhost:3001` para personalizar el destino del proxy de desarrollo si tu backend usa otra dirección.
 
 4.  **Inicia el servidor de desarrollo**:
     ```bash
     npm run dev
     ```
 
-Vite iniciará el servidor de desarrollo (normalmente en `http://localhost:5173`) y abrirá la aplicación en tu navegador. La aplicación está configurada para conectarse al backend que se ejecuta en el puerto 3001.
+Vite iniciará el servidor de desarrollo (normalmente en `http://localhost:5173`) y abrirá la aplicación en tu navegador. Gracias al proxy configurado, todas las llamadas a `/api` se redirigen automáticamente al backend que se ejecute en la URL definida por `VITE_API_URL` (por defecto, `http://localhost:3001`). Si tu backend ya expone las rutas bajo el prefijo `/api` (como hace NestJS con `app.setGlobalPrefix('api')`), no es necesario reescribir la ruta en el proxy: bastará con usar el mismo prefijo en el frontend.

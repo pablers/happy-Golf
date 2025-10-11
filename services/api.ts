@@ -1,6 +1,6 @@
 import type { UserProfile } from '../types';
 
-const API_BASE_URL = 'http://localhost:3001/api'; // The backend will run on port 3001
+const API_BASE_URL = '/api'; // Base relativa que aprovecha el proxy de Vite en desarrollo y el backend en producción.
 
 const handleResponse = async (response: Response) => {
   if (response.ok) {
