@@ -31,9 +31,9 @@
 2. **Iteración 2 – Refactor de Perfiles** ✅ _Completada_
    - Crear `ProfileService` y mover la lógica de negocio desde `profile.controller.ts`.
    - Actualizar pruebas o añadir nuevas que validen el servicio de forma aislada.
-3. **Iteración 3 – Aislar Usuarios y Autenticación**
-   - Reorganizar `users.service` dentro de `UsersModule` definiendo un controlador si se necesitan endpoints directos.
-   - Ajustar `AuthModule` para depender únicamente de las interfaces expuestas por `UsersModule`.
+3. **Iteración 3 – Aislar Usuarios y Autenticación** ✅ _Completada_
+   - Reorganizar `users.service` moviendo la persistencia a un `UsersRepository` dedicado y exponiendo una vista pública segura.
+   - Añadir `UsersController` para servir datos sanitizados y mantener a `AuthModule` consumiendo únicamente `UsersService`.
 4. **Iteración 4 – Endpoints de Rondas**
    - Diseñar `RoundsModule` con su servicio y controlador para centralizar la gestión de rondas.
    - Coordinar la futura migración de datos indicada en el punto 2 del documento.
