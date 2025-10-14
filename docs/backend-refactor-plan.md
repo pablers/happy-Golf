@@ -38,8 +38,15 @@
    - Se creó `RoundsModule` con controlador, servicio y repositorio en memoria para exponer CRUD básico.
    - Se añadieron pruebas unitarias que validan las operaciones principales del servicio.
    - Se documentó la necesidad de migrar el almacenamiento a base de datos en la siguiente iteración.
-5. **Iteración 5 – Limpieza y Documentación**
-   - Eliminar código muerto, actualizar `docs/IMPROVEMENTS.md` con el estado de la refactorización y documentar contratos públicos.
+5. **Iteración 5 – Limpieza y Documentación** ✅ _Completada_
+   - Se revisaron los módulos para retirar código muerto y normalizar comentarios descriptivos.
+   - `docs/IMPROVEMENTS.md` refleja el estado actual del backend y los siguientes pasos (persistencia y migración de datos).
+   - Se añadió documentación de contratos públicos en `docs/backend-api-contracts.md`.
+
+## Resumen tras Iteración 5
+- El backend ofrece módulos autocontenidos con controladores delgados, servicios orientados a negocio y repositorios preparados para una futura base de datos.
+- Los contratos HTTP expuestos (`/auth`, `/profile`, `/users`, `/rounds`) están documentados y protegidos con JWT.
+- Las pruebas unitarias cubren la lógica crítica de perfiles, usuarios y rondas, lo que facilita evolucionar hacia persistencia real sin perder seguridad.
 
 ## Lógica Detrás de la Estructura
 - NestJS favorece módulos autocontenidos; esta organización aprovecha esa convención para mantener dependencias explícitas y sencillas.

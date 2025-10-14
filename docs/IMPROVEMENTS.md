@@ -66,6 +66,12 @@ Durante el desarrollo, el frontend (que corre, por ejemplo, en `localhost:5173`)
 -   El `profile.controller.ts` contiene lógica de negocio que debería estar en un servicio.
 -   El `users.service` es utilizado por el módulo de autenticación, pero la gestión de usuarios podría ser un módulo más completo.
 
-### Solución Propuesta
--   **Separar Lógica en Servicios**: Crear un `ProfileService` para manejar la lógica de negocio relacionada con los perfiles, manteniendo el controlador delgado y centrado en manejar las peticiones HTTP.
--   **Refinar Módulos**: Asegurar que cada módulo de NestJS tenga una responsabilidad clara y siga las mejores prácticas del framework (controladores, servicios, módulos bien definidos).
+### Estado Actual
+-   El backend está modularizado en `Core`, `Auth`, `Users`, `Profile` y `Rounds`, cada uno con controladores delgados y servicios probados.
+-   La lógica de hash de contraseñas se centralizó en `HashingService` y se documentaron los contratos expuestos por cada módulo.
+-   Existen endpoints autenticados para perfiles, usuarios y rondas, cubiertos con pruebas unitarias.
+
+### Próximos Pasos
+-   **Migrar Persistencia**: Sustituir el almacenamiento en memoria por una base de datos real (por ejemplo PostgreSQL mediante Prisma) que unifique usuarios y rondas.
+-   **Sincronizar el Frontend**: Actualizar el cliente para consumir los nuevos endpoints y retirar la dependencia de `localStorage`.
+-   **Automatizar la Migración de Datos**: Crear scripts que importen el histórico (`registro-partidas.csv`) a la base de datos.

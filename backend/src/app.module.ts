@@ -6,7 +6,7 @@ import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
 import { RoundsModule } from './rounds/rounds.module';
 
-// AppModule compone el resto de módulos de dominio y la configuración global.
+// AppModule compone la configuración global y los módulos de dominio disponibles.
 @Module({
   imports: [
     ConfigModule.forRoot({

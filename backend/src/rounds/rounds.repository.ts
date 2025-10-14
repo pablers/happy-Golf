@@ -47,10 +47,16 @@ export class RoundsRepository {
       return undefined;
     }
 
+    // Garantiza que `updatedAt` avance incluso cuando las operaciones ocurren en el mismo milisegundo.
+    let updatedAt = new Date().toISOString();
+    if (updatedAt === existing.updatedAt) {
+      updatedAt = new Date(Date.parse(updatedAt) + 1).toISOString();
+    }
+
     const updated: Round = {
       ...existing,
       ...changes,
-      updatedAt: new Date().toISOString(),
+      updatedAt,
     };
     this.rounds.set(roundId, updated);
     return updated;
