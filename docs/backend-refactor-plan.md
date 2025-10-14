@@ -34,9 +34,10 @@
 3. **Iteración 3 – Aislar Usuarios y Autenticación** ✅ _Completada_
    - Reorganizar `users.service` moviendo la persistencia a un `UsersRepository` dedicado y exponiendo una vista pública segura.
    - Añadir `UsersController` para servir datos sanitizados y mantener a `AuthModule` consumiendo únicamente `UsersService`.
-4. **Iteración 4 – Endpoints de Rondas**
-   - Diseñar `RoundsModule` con su servicio y controlador para centralizar la gestión de rondas.
-   - Coordinar la futura migración de datos indicada en el punto 2 del documento.
+4. **Iteración 4 – Endpoints de Rondas** ✅ _Completada_
+   - Se creó `RoundsModule` con controlador, servicio y repositorio en memoria para exponer CRUD básico.
+   - Se añadieron pruebas unitarias que validan las operaciones principales del servicio.
+   - Se documentó la necesidad de migrar el almacenamiento a base de datos en la siguiente iteración.
 5. **Iteración 5 – Limpieza y Documentación**
    - Eliminar código muerto, actualizar `docs/IMPROVEMENTS.md` con el estado de la refactorización y documentar contratos públicos.
 

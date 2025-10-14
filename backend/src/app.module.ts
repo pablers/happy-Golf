@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
+import { RoundsModule } from './rounds/rounds.module';
 
 // AppModule compone el resto de módulos de dominio y la configuración global.
 @Module({
@@ -16,6 +17,7 @@ import { CoreModule } from './core/core.module';
     AuthModule,
     ProfileModule,
     UsersModule,
+    RoundsModule,
   ],
   controllers: [],
   providers: [],
