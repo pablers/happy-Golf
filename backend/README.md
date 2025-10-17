@@ -38,12 +38,10 @@ Follow these steps the first time you run the project or whenever the schema cha
 2. **Apply migrations**:
 
    ```bash
-   npx prisma migrate deploy
+   npx dotenv -e .env.development -- npx prisma migrate deploy
    ```
 
-   This command runs all pending SQL migrations against the database configured in `DATABASE_URL`. When you start the Nest serv
-er the `PrismaService` will execute the same command automatically, so the tables also get created if you forgot this manual ste
-p. Set `PRISMA_AUTO_MIGRATE=false` in your environment to skip the automatic run (useful in CI).
+   The `dotenv` wrapper loads `DATABASE_URL` before invoking Prisma, avoiding the `P1012` validation error you get when the variable is missing. When you start the Nest server the `PrismaService` will execute the same command automatically (it even loads the matching `.env` file if needed), so the tables also get created if you forgot this manual step. Set `PRISMA_AUTO_MIGRATE=false` in your environment to skip the automatic run (useful in CI).
 3. **Seed initial data**:
 
    ```bash

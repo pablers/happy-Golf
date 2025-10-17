@@ -1,7 +1,10 @@
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { config as loadEnvFile } from 'dotenv';
 
 /**
  * PrismaService encapsula el cliente de Prisma para compartir la conexión
@@ -64,6 +67,21 @@ export class PrismaService
       return;
     }
 
+    // Si la variable no existe, intenta cargar el archivo .env correspondiente antes de continuar.
+    if (!process.env.DATABASE_URL) {
+      const envFilePath = this.resolveEnvFilePath();
+      if (envFilePath) {
+        this.logger.log(`Cargando variables de entorno desde ${envFilePath} antes de ejecutar migraciones.`);
+        loadEnvFile({ path: envFilePath });
+      }
+    }
+
+    // Omite la auto migración si, incluso tras cargar el .env, la URL no está definida.
+    if (!process.env.DATABASE_URL) {
+      this.logger.warn('DATABASE_URL no está definido; se omite prisma migrate deploy.');
+      return;
+    }
+
     try {
       this.logger.log('Aplicando migraciones pendientes con prisma migrate deploy.');
       execSync('npx prisma migrate deploy', {
@@ -80,5 +98,23 @@ export class PrismaService
       );
       throw error;
     }
+  }
+
+  /**
+   * Determina el archivo .env a cargar según NODE_ENV para exponer DATABASE_URL al proceso actual.
+   */
+  private resolveEnvFilePath(): string | undefined {
+    const cwd = process.cwd();
+    const envSuffix = process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : undefined;
+    const candidates = [envSuffix, '.env'].filter(Boolean).map((file) => join(cwd, file as string));
+
+    for (const file of candidates) {
+      if (existsSync(file)) {
+        return file;
+      }
+    }
+
+    this.logger.warn('No se encontró un archivo .env para cargar DATABASE_URL automáticamente.');
+    return undefined;
   }
 }
