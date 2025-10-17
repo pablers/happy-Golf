@@ -48,7 +48,9 @@ Follow these steps the first time you run the project or whenever the schema cha
    npx prisma db seed
    ```
 
-   The seed loads demo users, profiles and golf courses so the app is immediately usable.
+   The seed script now reads `DATABASE_URL` automatically from `.env.development` (or from the
+   file pointed by `PRISMA_ENV_FILE`), so you can run it without manually exporting variables.
+   It loads demo users, profiles and golf courses so the app is immediately usable.
 
 ### 4. Testing the Integration
 

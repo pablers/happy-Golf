@@ -2,6 +2,48 @@ import { PrismaClient, RoundType, PracticeTime, WeatherCondition, WindCondition 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as bcrypt from 'bcrypt';
+import { config as loadEnv } from 'dotenv';
+
+/**
+ * Asegura que Prisma cuente con DATABASE_URL cargando el .env adecuado cuando
+ * el comando `npx prisma db seed` se ejecuta sin variables de entorno previas.
+ */
+function ensureDatabaseUrl(): void {
+  if (process.env.DATABASE_URL) {
+    return;
+  }
+
+  // Orden de búsqueda: bandera explícita, entorno actual, desarrollo y .env genérico.
+  const projectRoot = process.cwd();
+  const candidateFiles = [
+    process.env.PRISMA_ENV_FILE,
+    process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : undefined,
+    '.env.development',
+    '.env',
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((file) => path.resolve(projectRoot, file));
+
+  for (const candidate of candidateFiles) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+
+    loadEnv({ path: candidate });
+
+    if (process.env.DATABASE_URL) {
+      console.log(`Loaded DATABASE_URL from ${path.relative(projectRoot, candidate)}.`);
+      return;
+    }
+  }
+
+  throw new Error(
+    'DATABASE_URL no está definido. Carga el archivo .env adecuado antes de ejecutar el seed.',
+  );
+}
+
+// Carga la cadena de conexión antes de inicializar PrismaClient.
+ensureDatabaseUrl();
 
 const prisma = new PrismaClient();
 
