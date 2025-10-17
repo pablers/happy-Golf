@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from './users.service';
 
@@ -19,7 +19,7 @@ export class UsersController {
   /** Permite consultar cualquier usuario por id, útil para vistas administrativas. */
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async getById(@Param('id', ParseIntPipe) id: number) {
+  async getById(@Param('id') id: string) {
     return this.usersService.getPublicUserById(id);
   }
 }

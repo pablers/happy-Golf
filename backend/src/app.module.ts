@@ -5,6 +5,7 @@ import { ProfileModule } from './profile/profile.module';
 import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
 import { RoundsModule } from './rounds/rounds.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 // AppModule compone la configuración global y los módulos de dominio disponibles.
 @Module({
@@ -13,6 +14,7 @@ import { RoundsModule } from './rounds/rounds.module';
       envFilePath: `.env.${process.env.NODE_ENV}`,
       isGlobal: true,
     }),
+    PrismaModule,
     CoreModule,
     AuthModule,
     ProfileModule,

@@ -12,7 +12,7 @@ export class ProfileService {
   /**
    * Obtiene el perfil del usuario autenticado asegurando que exista en el sistema.
    */
-  async getProfile(userId: number): Promise<UserProfile> {
+  async getProfile(userId: string): Promise<UserProfile> {
     const user = await this.usersService.findOneById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -23,7 +23,7 @@ export class ProfileService {
   /**
    * Actualiza la información del perfil delegando la persistencia al servicio de usuarios.
    */
-  async updateProfile(userId: number, profileData: UserProfile): Promise<UserProfile> {
+  async updateProfile(userId: string, profileData: UserProfile): Promise<UserProfile> {
     const updatedUser = await this.usersService.updateProfile(userId, profileData);
     return updatedUser.profile;
   }

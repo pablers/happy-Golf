@@ -9,10 +9,7 @@ export class UsersService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly usersRepository: UsersRepository,
-  ) {
-    // Pre-carga un usuario para acelerar las pruebas manuales.
-    void this.ensureSeedUser();
-  }
+  ) {}
 
   /** Busca un usuario por correo electrónico para los flujos de autenticación. */
   async findOneByEmail(email: string): Promise<User | undefined> {
@@ -20,7 +17,7 @@ export class UsersService {
   }
 
   /** Recupera un usuario por id cuando otros módulos necesitan información detallada. */
-  async findOneById(id: number): Promise<User | undefined> {
+  async findOneById(id: string): Promise<User | undefined> {
     return this.usersRepository.findById(id);
   }
 
@@ -45,14 +42,14 @@ export class UsersService {
   }
 
   /** Actualiza el perfil de un usuario en el repositorio. */
-  async updateProfile(userId: number, profileData: UserProfile): Promise<User> {
+  async updateProfile(userId: string, profileData: UserProfile): Promise<User> {
     return this.usersRepository.updateProfile(userId, profileData);
   }
 
   /**
    * Obtiene un usuario en formato seguro o lanza una excepción si no existe.
    */
-  async getPublicUserById(userId: number): Promise<PublicUser> {
+  async getPublicUserById(userId: string): Promise<PublicUser> {
     const user = await this.usersRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -68,13 +65,5 @@ export class UsersService {
       favoriteCourseIds: [],
       trainingObjective: 'recommended',
     };
-  }
-
-  /** Crea un usuario de ejemplo en caso de que el repositorio esté vacío. */
-  private async ensureSeedUser(): Promise<void> {
-    const existingUser = await this.usersRepository.findByEmail('pablo@test.com');
-    if (!existingUser) {
-      await this.create('pablo@test.com', 'password123', 'Pablo Reina');
-    }
   }
 }

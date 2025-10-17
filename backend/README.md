@@ -8,7 +8,7 @@ This is the NestJS backend for the Golf Master application. It handles user auth
 -   **Endpoints**: `/register`, `/login`.
 -   **Profile Management**: Secure CRUD endpoints for user profiles.
 -   **Validation**: DTOs with `class-validator` for request payload validation.
--   **Data Store**: Simple in-memory user store for demonstration purposes.
+-   **Data Store**: PostgreSQL managed through Prisma, provisioned via Neon for development.
 
 ## Running the Application
 
@@ -30,7 +30,33 @@ npm run start:dev
 
 The server will be running on `http://localhost:3001`.
 
-### 3. API Endpoints
+### 3. Database Setup
+
+Follow these steps the first time you run the project or whenever the schema changes:
+
+1. **Configure the connection string**: the repository already ships with `.env.development` and `.env.production` files containing the Neon `DATABASE_URL`. Adjust them only if you are using a different cluster.
+2. **Apply migrations**:
+
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+   This command runs all pending SQL migrations against the database configured in `DATABASE_URL`.
+3. **Seed initial data**:
+
+   ```bash
+   npx prisma db seed
+   ```
+
+   The seed loads demo users, profiles and golf courses so the app is immediately usable.
+
+### 4. Testing the Integration
+
+-   **Automated tests**: run `npx jest`. The current suite focuses on service-level units and is being expanded to cover new Prisma flows.
+-   **Manual smoke checks**:
+    -   2025-10-17: `npm run start:dev` fails with `PrismaClientInitializationError (P1001)` when contacting the Neon pooler (`ep-gentle-mouse-agdx3lak-pooler.c-2.eu-central-1.aws.neon.tech:5432`). Validate network access or credentials before executing manual API tests.
+
+### 5. API Endpoints
 
 -   `POST /api/auth/register` - Create a new user.
 -   `POST /api/auth/login` - Log in and receive a JWT.

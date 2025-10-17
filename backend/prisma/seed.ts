@@ -52,23 +52,24 @@ async function main() {
   const coursesCSV = coursesFileContent.split('`')[1];
 
   const courseLines = coursesCSV.trim().split('\n').slice(1);
-  const courseIdMap = new Map<string, string>();
-
-  for (const line of courseLines) {
-    const [name] = line.split(';');
-    if (name) {
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      courseIdMap.set(name, id);
-    }
-  }
+  const seenCourseIds = new Set<string>();
 
   const coursePromises = courseLines.map(async (line) => {
     const [name, address, municipality, province, region, phone, email, url, latitude, longitude] = line.split(';');
     if (!name) return;
-    const id = courseIdMap.get(name)!;
 
-    return prisma.golfCourse.create({
-      data: {
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    // Evitamos registrar duplicados cuando diferentes filas comparten el mismo slug de curso.
+    if (seenCourseIds.has(id)) {
+      return;
+    }
+
+    seenCourseIds.add(id);
+
+    return prisma.golfCourse.upsert({
+      where: { id },
+      update: {},
+      create: {
         id,
         name,
         address: address || null,
@@ -84,7 +85,7 @@ async function main() {
     });
   });
   await Promise.all(coursePromises);
-  console.log(`Seeded ${courseLines.length} golf courses.`);
+  console.log(`Seeded ${seenCourseIds.size} golf courses.`);
 
   // --- 4. Seed Rounds ---
   const roundsPath = path.resolve(__dirname, '../../data/registro-partidas.csv');

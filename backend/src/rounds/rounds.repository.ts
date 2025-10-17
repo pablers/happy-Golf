@@ -14,7 +14,7 @@ export class RoundsRepository {
   private readonly rounds = new Map<string, Round>();
 
   /** Devuelve todas las rondas de un usuario ordenadas de más reciente a más antigua. */
-  async findByUserId(userId: number): Promise<Round[]> {
+  async findByUserId(userId: string): Promise<Round[]> {
     return Array.from(this.rounds.values())
       .filter(round => round.userId === userId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
