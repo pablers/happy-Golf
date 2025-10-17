@@ -55,7 +55,7 @@ export interface PostRoundAnswers {
 
 export interface Round {
   id: string;
-  userId: number;
+  userId: string;
   date: string;
   setup: RoundSetup;
   scores: HoleScore[];
@@ -65,7 +65,7 @@ export interface Round {
 }
 
 export interface CreateRoundInput {
-  userId: number;
+  userId: string;
   date: string;
   setup: RoundSetup;
   scores: HoleScore[];

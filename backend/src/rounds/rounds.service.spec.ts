@@ -36,32 +36,32 @@ const baseRoundPayload: CreateRoundDto = {
 describe('RoundsService', () => {
   it('crea y lista rondas asociadas a un usuario', async () => {
     const service = buildService();
-    const created = await service.create(1, baseRoundPayload);
+    const created = await service.create('user-1', baseRoundPayload);
 
     expect(created.id).toBeDefined();
-    expect(created.userId).toBe(1);
+    expect(created.userId).toBe('user-1');
 
-    const rounds = await service.list(1);
+    const rounds = await service.list('user-1');
     expect(rounds).toHaveLength(1);
     expect(rounds[0].id).toBe(created.id);
   });
 
   it('impide acceder a rondas de otros usuarios', async () => {
     const service = buildService();
-    const created = await service.create(1, baseRoundPayload);
+    const created = await service.create('user-1', baseRoundPayload);
 
-    await expect(service.getById(2, created.id)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.getById('user-2', created.id)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('permite actualizar y elimina rondas existentes', async () => {
     const service = buildService();
-    const created = await service.create(1, baseRoundPayload);
+    const created = await service.create('user-1', baseRoundPayload);
 
-    const updated = await service.update(1, created.id, { answers: { physical_state: 'good' } });
+    const updated = await service.update('user-1', created.id, { answers: { physical_state: 'good' } });
     expect(updated.answers.physical_state).toBe('good');
     expect(updated.updatedAt).not.toBe(created.updatedAt);
 
-    await service.remove(1, created.id);
-    await expect(service.getById(1, created.id)).rejects.toBeInstanceOf(NotFoundException);
+    await service.remove('user-1', created.id);
+    await expect(service.getById('user-1', created.id)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -76,6 +76,13 @@ Durante el desarrollo, el frontend (que corre, por ejemplo, en `localhost:5173`)
 -   Existen endpoints autenticados para perfiles, usuarios y rondas, cubiertos con pruebas unitarias.
 
 ### Próximos Pasos
--   **Migrar Persistencia**: Sustituir el almacenamiento en memoria por una base de datos real (por ejemplo PostgreSQL mediante Prisma) que unifique usuarios y rondas.
+-   **Consolidar Persistencia**: La API ya usa PostgreSQL mediante Prisma; se debe monitorear el rendimiento y habilitar métricas básicas para el pool de conexiones.
 -   **Sincronizar el Frontend**: Actualizar el cliente para consumir los nuevos endpoints y retirar la dependencia de `localStorage`.
 -   **Automatizar la Migración de Datos**: Crear scripts que importen el histórico (`registro-partidas.csv`) a la base de datos.
+
+## 5. Seguimiento de Prisma + PostgreSQL
+
+-   **Índices adicionales**: evaluar índices compuestos para búsquedas frecuentes de rondas por usuario y fecha.
+-   **Pruebas de integración**: ampliar la suite de Jest para cubrir los nuevos repositorios Prisma usando una base de datos temporal.
+-   **Monitoreo de seed**: registrar métricas de tiempo de carga y validar que los datasets externos no introduzcan duplicados.
+-   **Conectividad Neon**: diagnosticar el error `PrismaClientInitializationError (P1001)` observado al iniciar el backend para garantizar acceso al cluster compartido.

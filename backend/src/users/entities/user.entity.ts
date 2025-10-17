@@ -1,12 +1,14 @@
 import { UserProfile } from '../user.interface';
 
 /**
- * User define la estructura persistida para los usuarios gestionados en memoria.
+ * User representa la entidad persistida en PostgreSQL a través de Prisma.
  */
 export interface User {
-  id: number;
+  id: string;
   email: string;
   passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
   profile: UserProfile;
 }
 

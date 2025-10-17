@@ -34,21 +34,21 @@ describe('ProfileService', () => {
   it('should return the profile for an existing user', async () => {
     usersService.findOneById.mockResolvedValue({ profile });
 
-    await expect(service.getProfile(1)).resolves.toEqual(profile);
-    expect(usersService.findOneById).toHaveBeenCalledWith(1);
+    await expect(service.getProfile('user-1')).resolves.toEqual(profile);
+    expect(usersService.findOneById).toHaveBeenCalledWith('user-1');
   });
 
   it('should throw NotFoundException when the user does not exist', async () => {
     usersService.findOneById.mockResolvedValue(undefined);
 
-    await expect(service.getProfile(99)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.getProfile('missing-user')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('should update the profile through the users service', async () => {
     const updatedProfile: UserProfile = { ...profile, trainingObjective: 'break 80' };
     usersService.updateProfile.mockResolvedValue({ profile: updatedProfile });
 
-    await expect(service.updateProfile(1, updatedProfile)).resolves.toEqual(updatedProfile);
-    expect(usersService.updateProfile).toHaveBeenCalledWith(1, updatedProfile);
+    await expect(service.updateProfile('user-1', updatedProfile)).resolves.toEqual(updatedProfile);
+    expect(usersService.updateProfile).toHaveBeenCalledWith('user-1', updatedProfile);
   });
 });
