@@ -1,5 +1,10 @@
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { config as loadEnvFile } from 'dotenv';
 
 /**
  * PrismaService encapsula el cliente de Prisma para compartir la conexión
@@ -34,6 +39,10 @@ export class PrismaService
   /** Inicializa la conexión al arrancar el módulo e informa su estado. */
   async onModuleInit(): Promise<void> {
     this.logger.log('Inicializando conexión con la base de datos (Prisma).');
+
+    // Despliega migraciones automáticamente para garantizar que las tablas existan.
+    this.ensureMigrationsAreApplied();
+
     await this.$connect();
     this.logger.log('Conexión Prisma establecida correctamente.');
   }
@@ -42,5 +51,70 @@ export class PrismaService
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
     this.logger.log('Conexión Prisma cerrada.');
+  }
+
+  /** Ejecuta prisma migrate deploy si no se ha desactivado explícitamente. */
+  private ensureMigrationsAreApplied(): void {
+    // Permite desactivar la auto-aplicación en entornos (tests, CI) donde no sea deseable.
+    if (process.env.PRISMA_AUTO_MIGRATE === 'false') {
+      this.logger.log('PRISMA_AUTO_MIGRATE=false, se omite prisma migrate deploy.');
+      return;
+    }
+
+    // Evita ejecutar migraciones dentro del entorno de pruebas para acelerar suites unitarias.
+    if (process.env.NODE_ENV === 'test') {
+      this.logger.log('NODE_ENV=test, se omite prisma migrate deploy para acelerar las pruebas.');
+      return;
+    }
+
+    // Si la variable no existe, intenta cargar el archivo .env correspondiente antes de continuar.
+    if (!process.env.DATABASE_URL) {
+      const envFilePath = this.resolveEnvFilePath();
+      if (envFilePath) {
+        this.logger.log(`Cargando variables de entorno desde ${envFilePath} antes de ejecutar migraciones.`);
+        loadEnvFile({ path: envFilePath });
+      }
+    }
+
+    // Omite la auto migración si, incluso tras cargar el .env, la URL no está definida.
+    if (!process.env.DATABASE_URL) {
+      this.logger.warn('DATABASE_URL no está definido; se omite prisma migrate deploy.');
+      return;
+    }
+
+    try {
+      this.logger.log('Aplicando migraciones pendientes con prisma migrate deploy.');
+      execSync('npx prisma migrate deploy', {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+        env: process.env,
+      });
+      this.logger.log('Migraciones Prisma aplicadas correctamente.');
+    } catch (error) {
+      // Proporciona un mensaje claro para que el desarrollador sepa cómo corregirlo.
+      this.logger.error(
+        'No fue posible ejecutar prisma migrate deploy. Revisa DATABASE_URL y la conectividad antes de reiniciar el servicio.',
+        (error as Error).stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Determina el archivo .env a cargar según NODE_ENV para exponer DATABASE_URL al proceso actual.
+   */
+  private resolveEnvFilePath(): string | undefined {
+    const cwd = process.cwd();
+    const envSuffix = process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : undefined;
+    const candidates = [envSuffix, '.env'].filter(Boolean).map((file) => join(cwd, file as string));
+
+    for (const file of candidates) {
+      if (existsSync(file)) {
+        return file;
+      }
+    }
+
+    this.logger.warn('No se encontró un archivo .env para cargar DATABASE_URL automáticamente.');
+    return undefined;
   }
 }
