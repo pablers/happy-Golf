@@ -96,19 +96,23 @@ async function main() {
   const courseLines = coursesCSV.trim().split('\n').slice(1);
   const seenCourseIds = new Set<string>();
 
-  const coursePromises = courseLines.map(async (line) => {
+  let insertedCourses = 0;
+  for (const line of courseLines) {
     const [name, address, municipality, province, region, phone, email, url, latitude, longitude] = line.split(';');
-    if (!name) return;
+    if (!name) {
+      continue;
+    }
 
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     // Evitamos registrar duplicados cuando diferentes filas comparten el mismo slug de curso.
     if (seenCourseIds.has(id)) {
-      return;
+      continue;
     }
 
     seenCourseIds.add(id);
 
-    return prisma.golfCourse.upsert({
+    // Insertamos de forma secuencial para no agotar el pool de conexiones de Neon.
+    await prisma.golfCourse.upsert({
       where: { id },
       update: {},
       create: {
@@ -125,9 +129,10 @@ async function main() {
         longitude: longitude ? longitude.replace(',', '.') : null,
       },
     });
-  });
-  await Promise.all(coursePromises);
-  console.log(`Seeded ${seenCourseIds.size} golf courses.`);
+
+    insertedCourses += 1;
+  }
+  console.log(`Seeded ${insertedCourses} golf courses.`);
 
   // --- 4. Seed Rounds ---
   const roundsPath = path.resolve(__dirname, '../../data/registro-partidas.csv');
