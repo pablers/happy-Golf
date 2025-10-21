@@ -66,7 +66,7 @@ Ahora, en una **nueva terminal**, inicia el servidor de desarrollo para el front
 3.  **Configura las Variables de Entorno del Frontend**:
     - Crea un archivo llamado `.env.local` en la raíz del proyecto (junto a `index.html`).
     - Añade tu clave de API con el prefijo que espera Vite: `VITE_GEMINI_API_KEY=TU_CLAVE_DE_API_AQUI`.
-    - (Opcional) Define `VITE_API_URL=http://localhost:3001` para personalizar el destino del proxy de desarrollo si tu backend usa otra dirección.
+    - (Opcional en local) Define `VITE_API_URL=http://localhost:3001` para personalizar el destino del proxy de desarrollo si tu backend usa otra dirección.
 
 4.  **Inicia el servidor de desarrollo**:
     ```bash
@@ -74,3 +74,14 @@ Ahora, en una **nueva terminal**, inicia el servidor de desarrollo para el front
     ```
 
 Vite iniciará el servidor de desarrollo (normalmente en `http://localhost:5173`) y abrirá la aplicación en tu navegador. Gracias al proxy configurado, todas las llamadas a `/api` se redirigen automáticamente al backend que se ejecute en la URL definida por `VITE_API_URL` (por defecto, `http://localhost:3001`). Si tu backend ya expone las rutas bajo el prefijo `/api` (como hace NestJS con `app.setGlobalPrefix('api')`), no es necesario reescribir la ruta en el proxy: bastará con usar el mismo prefijo en el frontend.
+
+### Variables de entorno en producción (Vercel)
+
+Cuando despliegues la SPA en Vercel, define la variable `VITE_API_URL` en los entornos **Development**, **Preview** y **Production** para indicar la URL base del backend:
+
+- Si el backend se publica en un dominio propio, establece `VITE_API_URL=https://tu-backend/api` (ajusta el dominio según tu despliegue).
+- Para la infraestructura actual del proyecto, usa `VITE_API_URL=https://backend.sophox.es`.
+
+Con esta variable, la SPA enviará las peticiones directamente al dominio del backend sin depender de un reverse proxy adicional. Mantener el valor sin definir dejará activa la ruta relativa `/api`, útil si configuras un rewrite en `vercel.json` o utilizas el proxy integrado durante el desarrollo local.
+
+> ✅ Tras cada despliegue, valida que `https://www.sophox.es/api/auth/login` (o el dominio que corresponda) devuelve la respuesta del backend para confirmar que la variable está bien configurada.
