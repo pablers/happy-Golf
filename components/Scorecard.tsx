@@ -12,7 +12,7 @@ import ReviewQuestionsModal from './ReviewQuestionsModal';
 interface ScorecardProps {
     setup: ScorecardSessionSetup;
     userProfile: UserProfile;
-    onSaveRound: (round: SavedRound) => void;
+    onSaveRound: (round: SavedRound) => Promise<void>;
 }
 
 const SESSION_STORAGE_KEY = 'golf-multiplayer-session-data';
@@ -323,7 +323,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
         setIsReviewModalOpen(false);
     };
 
-    const performSave = () => {
+    const performSave = async () => {
         const userRoundData: SavedRound = {
             id: `${setup.course.id}-${new Date().toISOString()}`,
             date: new Date().toISOString(),
@@ -332,7 +332,12 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
             answers,
             userProfile,
         };
-        onSaveRound(userRoundData);
+        try {
+            await onSaveRound(userRoundData);
+        } catch (error) {
+            console.error('Failed to save round:', error);
+            alert('No se pudo guardar la ronda. Inténtalo de nuevo en unos segundos.');
+        }
     };
     
     const handleSaveRound = () => {
@@ -371,7 +376,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ setup, userProfile, onSaveRound }
                 onSave={(newAnswers) => {
                     setAnswers(newAnswers);
                     setIsReviewModalOpen(false);
-                    setTimeout(performSave, 100);
+                    setTimeout(() => { void performSave(); }, 100);
                 }}
                 scores={players.length > 0 ? players[0].scores : []}
                 roundState={roundState}
