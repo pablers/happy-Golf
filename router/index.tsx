@@ -9,6 +9,7 @@ import RoundAnalysisPage from '../pages/RoundAnalysisPage';
 import SettingsPage from '../pages/SettingsPage';
 import TrainingGuidePage from '../pages/TrainingGuidePage';
 import ClubhousePage from '../pages/ClubhousePage';
+import OnboardingPage from '../pages/OnboardingPage';
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       { path: 'training-guide', element: <TrainingGuidePage /> },
       { path: 'clubhouse', element: <ClubhousePage /> },
     ],
+  },
+  {
+    path: '/onboarding',
+    element: <OnboardingPage />,
   },
   {
     path: '/login',
