@@ -13,8 +13,7 @@ import { config as loadEnvFile } from 'dotenv';
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+  implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
@@ -40,11 +39,19 @@ export class PrismaService
   async onModuleInit(): Promise<void> {
     this.logger.log('Inicializando conexión con la base de datos (Prisma).');
 
-    // Despliega migraciones automáticamente para garantizar que las tablas existan.
-    this.ensureMigrationsAreApplied();
+    try {
+      await this.$connect();
+      this.logger.log('Conexión Prisma establecida correctamente.');
 
-    await this.$connect();
-    this.logger.log('Conexión Prisma establecida correctamente.');
+      // Solo ejecutar migraciones si la conexión fue exitosa
+      if (process.env.PRISMA_AUTO_MIGRATE !== 'false') {
+        this.ensureMigrationsAreApplied();
+      }
+    } catch (error) {
+      this.logger.error('Error al conectar con la base de datos:', (error as Error).message);
+      this.logger.warn('El servidor continuará sin base de datos. Algunas funcionalidades no estarán disponibles.');
+      // No lanzamos el error para permitir que el servidor inicie de todos modos
+    }
   }
 
   /** Libera la conexión cuando NestJS cierra el módulo e informa el cierre. */
@@ -91,12 +98,12 @@ export class PrismaService
       });
       this.logger.log('Migraciones Prisma aplicadas correctamente.');
     } catch (error) {
-      // Proporciona un mensaje claro para que el desarrollador sepa cómo corregirlo.
-      this.logger.error(
-        'No fue posible ejecutar prisma migrate deploy. Revisa DATABASE_URL y la conectividad antes de reiniciar el servicio.',
-        (error as Error).stack,
+      // En lugar de crashear, solo advertimos
+      this.logger.warn(
+        'No fue posible ejecutar prisma migrate deploy. Revisa DATABASE_URL y la conectividad.',
       );
-      throw error;
+      this.logger.warn('El servidor continuará pero puede tener problemas con la base de datos.');
+      // NO lanzamos el error para permitir que el servidor inicie
     }
   }
 
