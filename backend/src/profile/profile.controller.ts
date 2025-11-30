@@ -1,28 +1,23 @@
 import { Controller, Get, Put, UseGuards, Request, Body } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UsersService } from '../users/users.service';
 import { UpdateProfileDto } from './dto/profile.dto';
+import { ProfileService } from './profile.service';
 
 @Controller('profile')
 export class ProfileController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly profileService: ProfileService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
   async getProfile(@Request() req) {
-    // req.user is populated by the JwtStrategy
-    const user = await this.usersService.findOneById(req.user.userId);
-    if (!user) {
-        // This case should be rare if token is valid
-        throw new Error('User not found');
-    }
-    return user.profile;
+    // Obtiene el perfil delegando la lógica al servicio de perfiles.
+    return this.profileService.getProfile(req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put()
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
-    const updatedUser = await this.usersService.updateProfile(req.user.userId, updateProfileDto);
-    return updatedUser.profile;
+    // Actualiza el perfil aplicando validaciones desde el servicio dedicado.
+    return this.profileService.updateProfile(req.user.userId, updateProfileDto);
   }
 }

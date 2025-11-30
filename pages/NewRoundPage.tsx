@@ -41,10 +41,15 @@ const NewRoundPage: React.FC = () => {
     setRoundSetupStep('playing');
   };
 
-  const handleSaveRound = (round: SavedRound) => {
-    saveRound(round);
-    alert('Ronda guardada con éxito en tu historial.');
-    navigate('/analysis');
+  const handleSaveRound = async (round: SavedRound) => {
+    try {
+      await saveRound(round);
+      alert('Ronda guardada con éxito en tu historial.');
+      navigate('/analysis');
+    } catch (error) {
+      console.error('Failed to persist round:', error);
+      alert('No se pudo guardar la ronda. Revisa tu conexión e inténtalo nuevamente.');
+    }
   };
 
   const handleBackToCourseSelection = () => setRoundSetupStep('course_selection');

@@ -10,13 +10,21 @@ const LoginPage: React.FC = () => {
 
   React.useEffect(() => {
     if (userProfile) {
-      navigate('/');
+      // Check if this is a new user (default handicap of 36 and no favorite courses)
+      const isNewUser = userProfile.hcpHistory.length === 1 &&
+        userProfile.hcpHistory[0].hcp === 36 &&
+        userProfile.favoriteCourseIds.length === 0;
+
+      if (isNewUser) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
     }
   }, [userProfile, navigate]);
 
   const handleLoginSuccess = (token: string, profile: UserProfile) => {
     login(token, profile);
-    navigate('/');
   };
 
   const handleSkip = () => {

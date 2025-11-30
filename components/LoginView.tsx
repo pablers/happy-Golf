@@ -27,10 +27,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onSkip }) => {
         onLoginSuccess(access_token, profile);
       } else {
         const { access_token, profile } = await api.register(email, password, name);
-        alert('Registro exitoso. Ahora puedes iniciar sesión.');
-        // Switch to login view after successful registration
-        setIsLogin(true);
-        setPassword('');
+        // Redirect to onboarding after successful registration
+        onLoginSuccess(access_token, profile);
       }
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error. Inténtalo de nuevo.');
@@ -91,7 +89,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onSkip }) => {
                 placeholder="********"
               />
             </div>
-            
+
             {error && <p className="text-red-500 dark:text-red-400 text-sm text-center">{error}</p>}
 
             <div>
@@ -111,7 +109,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onSkip }) => {
             </button>
           </div>
           <div className="mt-4 text-center">
-             <button onClick={onSkip} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline">
+            <button onClick={onSkip} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline">
               Saltar por ahora
             </button>
           </div>

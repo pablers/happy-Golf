@@ -2,6 +2,48 @@ import { PrismaClient, RoundType, PracticeTime, WeatherCondition, WindCondition 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as bcrypt from 'bcrypt';
+import { config as loadEnv } from 'dotenv';
+
+/**
+ * Asegura que Prisma cuente con DATABASE_URL cargando el .env adecuado cuando
+ * el comando `npx prisma db seed` se ejecuta sin variables de entorno previas.
+ */
+function ensureDatabaseUrl(): void {
+  if (process.env.DATABASE_URL) {
+    return;
+  }
+
+  // Orden de búsqueda: bandera explícita, entorno actual, desarrollo y .env genérico.
+  const projectRoot = process.cwd();
+  const candidateFiles = [
+    process.env.PRISMA_ENV_FILE,
+    process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : undefined,
+    '.env.development',
+    '.env',
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((file) => path.resolve(projectRoot, file));
+
+  for (const candidate of candidateFiles) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+
+    loadEnv({ path: candidate });
+
+    if (process.env.DATABASE_URL) {
+      console.log(`Loaded DATABASE_URL from ${path.relative(projectRoot, candidate)}.`);
+      return;
+    }
+  }
+
+  throw new Error(
+    'DATABASE_URL no está definido. Carga el archivo .env adecuado antes de ejecutar el seed.',
+  );
+}
+
+// Carga la cadena de conexión antes de inicializar PrismaClient.
+ensureDatabaseUrl();
 
 const prisma = new PrismaClient();
 
@@ -52,23 +94,28 @@ async function main() {
   const coursesCSV = coursesFileContent.split('`')[1];
 
   const courseLines = coursesCSV.trim().split('\n').slice(1);
-  const courseIdMap = new Map<string, string>();
+  const seenCourseIds = new Set<string>();
 
+  let insertedCourses = 0;
   for (const line of courseLines) {
-    const [name] = line.split(';');
-    if (name) {
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      courseIdMap.set(name, id);
-    }
-  }
-
-  const coursePromises = courseLines.map(async (line) => {
     const [name, address, municipality, province, region, phone, email, url, latitude, longitude] = line.split(';');
-    if (!name) return;
-    const id = courseIdMap.get(name)!;
+    if (!name) {
+      continue;
+    }
 
-    return prisma.golfCourse.create({
-      data: {
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    // Evitamos registrar duplicados cuando diferentes filas comparten el mismo slug de curso.
+    if (seenCourseIds.has(id)) {
+      continue;
+    }
+
+    seenCourseIds.add(id);
+
+    // Insertamos de forma secuencial para no agotar el pool de conexiones de Neon.
+    await prisma.golfCourse.upsert({
+      where: { id },
+      update: {},
+      create: {
         id,
         name,
         address: address || null,
@@ -82,9 +129,10 @@ async function main() {
         longitude: longitude ? longitude.replace(',', '.') : null,
       },
     });
-  });
-  await Promise.all(coursePromises);
-  console.log(`Seeded ${courseLines.length} golf courses.`);
+
+    insertedCourses += 1;
+  }
+  console.log(`Seeded ${insertedCourses} golf courses.`);
 
   // --- 4. Seed Rounds ---
   const roundsPath = path.resolve(__dirname, '../../data/registro-partidas.csv');
