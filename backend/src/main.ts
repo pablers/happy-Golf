@@ -21,10 +21,10 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
-
+  
   // Set a global prefix for all routes
   app.setGlobalPrefix('api');
-
+  
   // Use global pipes for validation
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
