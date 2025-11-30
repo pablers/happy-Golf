@@ -1,6 +1,6 @@
 import type { UserProfile } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api'; // Permite apuntar al backend desplegado o usar la ruta relativa por defecto.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'; // Base relativa que aprovecha el proxy de Vite en desarrollo y el backend en producción.
 
 const handleResponse = async (response: Response) => {
   if (response.ok) {
@@ -85,6 +85,23 @@ export const api = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(profile),
+    });
+    return handleResponse(response);
+  },
+
+  completeProfile: async (
+    token: string,
+    handicap: number,
+    trainingObjective: string,
+    favoriteCourseIds: string[]
+  ): Promise<UserProfile> => {
+    const response = await fetch(`${API_BASE_URL}/auth/complete-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ handicap, trainingObjective, favoriteCourseIds }),
     });
     return handleResponse(response);
   },

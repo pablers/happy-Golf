@@ -9,7 +9,7 @@ export class UsersService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly usersRepository: UsersRepository,
-  ) {}
+  ) { }
 
   /** Busca un usuario por correo electrónico para los flujos de autenticación. */
   async findOneByEmail(email: string): Promise<User | undefined> {
@@ -61,7 +61,7 @@ export class UsersService {
   private buildDefaultProfile(name: string): UserProfile {
     return {
       name,
-      hcpHistory: [{ date: new Date().toISOString(), hcp: 18.0 }],
+      hcpHistory: [{ date: new Date().toISOString(), hcp: 36.0 }],
       favoriteCourseIds: [],
       trainingObjective: 'recommended',
     };

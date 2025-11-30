@@ -10,7 +10,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private readonly hashingService: HashingService,
-  ) {}
+  ) { }
 
   // Valida credenciales contrastando el hash almacenado con el valor recibido.
   async validateUser(email: string, pass: string): Promise<any> {
@@ -50,5 +50,23 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  // Completa el perfil del usuario con los datos del onboarding.
+  async completeProfile(userId: string, handicap: number, trainingObjective: string, favoriteCourseIds: string[]) {
+    const user = await this.usersService.findOneById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const updatedProfile = {
+      ...user.profile,
+      hcpHistory: [{ date: new Date().toISOString(), hcp: handicap }],
+      trainingObjective,
+      favoriteCourseIds,
+    };
+
+    await this.usersService.updateProfile(userId, updatedProfile);
+    return updatedProfile;
   }
 }
