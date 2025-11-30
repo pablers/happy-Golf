@@ -6,9 +6,12 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CoreModule } from '../core/core.module';
 
+// AuthModule reúne controladores, servicios y estrategias de autenticación.
 @Module({
   imports: [
+    CoreModule,
     UsersModule,
     PassportModule,
     JwtModule.registerAsync({

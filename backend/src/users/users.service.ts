@@ -1,61 +1,69 @@
-import { Injectable, ConflictException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { HashingService } from '../core/hashing.service';
 import { UserProfile } from './user.interface';
-
-// This is a mock user type for our in-memory database
-export type User = {
-    id: number;
-    email: string;
-    passwordHash: string;
-    profile: UserProfile;
-};
+import { CreateUserInput, PublicUser, User } from './entities/user.entity';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  private readonly users: User[] = [];
+  constructor(
+    private readonly hashingService: HashingService,
+    private readonly usersRepository: UsersRepository,
+  ) { }
 
-  constructor() {
-    // Pre-seed a user for easy testing
-    this.create('pablo@test.com', 'password123', 'Pablo Reina').catch(console.error);
-  }
-
+  /** Busca un usuario por correo electrónico para los flujos de autenticación. */
   async findOneByEmail(email: string): Promise<User | undefined> {
-    return this.users.find(user => user.email === email);
-  }
-  
-  async findOneById(id: number): Promise<User | undefined> {
-    return this.users.find(user => user.id === id);
+    return this.usersRepository.findByEmail(email);
   }
 
-  async create(email: string, password: string, name: string): Promise<User> {
-    if (this.users.some(user => user.email === email)) {
+  /** Recupera un usuario por id cuando otros módulos necesitan información detallada. */
+  async findOneById(id: string): Promise<User | undefined> {
+    return this.usersRepository.findById(id);
+  }
+
+  /**
+   * Registra un usuario nuevo delegando la persistencia en el repositorio.
+   * Devuelve una vista pública sin exponer el hash de la contraseña.
+   */
+  async create(email: string, password: string, name: string): Promise<PublicUser> {
+    const existingUser = await this.usersRepository.findByEmail(email);
+    if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-    
-    const newUser: User = {
-      id: this.users.length + 1,
+    const payload: CreateUserInput = {
       email,
-      passwordHash,
-      profile: {
-        name,
-        hcpHistory: [{ date: new Date().toISOString(), hcp: 18.0 }], // Default HCP history
-        favoriteCourseIds: [],
-        trainingObjective: 'recommended',
-      },
+      passwordHash: await this.hashingService.hash(password),
+      profile: this.buildDefaultProfile(name),
     };
-    this.users.push(newUser);
-    return newUser;
+
+    const newUser = await this.usersRepository.create(payload);
+    return this.usersRepository.toPublicUser(newUser);
   }
 
-  async updateProfile(userId: number, profileData: UserProfile): Promise<User> {
-      const userIndex = this.users.findIndex(user => user.id === userId);
-      if (userIndex === -1) {
-          throw new Error('User not found');
-      }
-      this.users[userIndex].profile = profileData;
-      return this.users[userIndex];
+  /** Actualiza el perfil de un usuario en el repositorio. */
+  async updateProfile(userId: string, profileData: UserProfile): Promise<User> {
+    return this.usersRepository.updateProfile(userId, profileData);
+  }
+
+  /**
+   * Obtiene un usuario en formato seguro o lanza una excepción si no existe.
+   */
+  async getPublicUserById(userId: string): Promise<PublicUser> {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.usersRepository.toPublicUser(user);
+  }
+
+  /** Genera el perfil inicial con valores por defecto coherentes. */
+  private buildDefaultProfile(name: string): UserProfile {
+    return {
+      name,
+      hcpHistory: [{ date: new Date().toISOString(), hcp: 36.0 }],
+      favoriteCourseIds: [],
+      trainingObjective: 'recommended',
+    };
   }
 }
