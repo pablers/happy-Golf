@@ -4,6 +4,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
+  console.log('--- DEBUG PRE-BOOTSTRAP ---');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+  console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0);
+  console.log('---------------------------');
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
