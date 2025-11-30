@@ -1,6 +1,11 @@
 import type { UserProfile } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'; // Base relativa que aprovecha el proxy de Vite en desarrollo y el backend en producción.
+const getApiBaseUrl = () => {
+  const url = import.meta.env.VITE_API_URL || '/api';
+  return url.endsWith('/api') ? url : `${url}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const handleResponse = async (response: Response) => {
   if (response.ok) {
