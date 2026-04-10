@@ -10,6 +10,8 @@ export const parseRoundsCSV = (csvText: string): SavedRound[] => {
     const header = lines[0].split(';').map(h => h.trim());
     const rounds: SavedRound[] = [];
 
+    const courseMap = new Map(GOLF_COURSES.map(c => [c.id, c]));
+
     for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(';');
         if (values.length < header.length) continue;
@@ -19,7 +21,7 @@ export const parseRoundsCSV = (csvText: string): SavedRound[] => {
             rowData[key] = values[index]?.trim() || '';
         });
 
-        const course = GOLF_COURSES.find(c => c.id === rowData.courseId);
+        const course = courseMap.get(rowData.courseId);
         if (!course) continue;
 
         const scores: HoleScore[] = INITIAL_HOLE_SCORES.map(initialHole => {
