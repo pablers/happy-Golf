@@ -6,6 +6,8 @@ import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
 import { RoundsModule } from './rounds/rounds.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 // AppModule compone la configuración global y los módulos de dominio disponibles.
 @Module({
@@ -13,6 +15,10 @@ import { PrismaModule } from './prisma/prisma.module';
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV}`,
       isGlobal: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'dist'),
+      exclude: ['/api/(.*)'],
     }),
     PrismaModule,
     CoreModule,
