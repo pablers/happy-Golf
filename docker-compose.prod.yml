@@ -1,0 +1,25 @@
+services:
+  happy-golf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=https://golf.sophox.es
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.golf.rule=Host(`golf.sophox.es`)"
+      - "traefik.http.routers.golf.entrypoints=websecure"
+      - "traefik.http.routers.golf.tls=true"
+      - "traefik.http.routers.golf.tls.certresolver=letsencrypt"
+      - "traefik.http.services.golf.loadbalancer.server.port=3000"
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
