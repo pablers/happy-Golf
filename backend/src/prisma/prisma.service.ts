@@ -7,8 +7,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { config as loadEnvFile } from 'dotenv';
 
 /**
- * PrismaService encapsula el cliente de Prisma para compartir la conexión
- * a PostgreSQL en toda la aplicación NestJS.
+ * PrismaService encapsula el cliente de Prisma para compartir la conexin
+ * a PostgreSQL en toda la aplicacin NestJS.
  */
 @Injectable()
 export class PrismaService
@@ -29,40 +29,40 @@ export class PrismaService
       this.logger.warn(`Prisma warn [${event.target ?? 'general'}]: ${event.message}`);
     });
 
-    // Captura errores de Prisma y los envía al logger centralizado de NestJS.
+    // Captura errores de Prisma y los enva al logger centralizado de NestJS.
     this.$on('error', (event: Prisma.LogEvent) => {
       this.logger.error(`Prisma error [${event.target ?? 'general'}]: ${event.message}`);
     });
   }
 
-  /** Inicializa la conexión al arrancar el módulo e informa su estado. */
+  /** Inicializa la conexin al arrancar el mdulo e informa su estado. */
   async onModuleInit(): Promise<void> {
-    this.logger.log('Inicializando conexión con la base de datos (Prisma).');
+    this.logger.log('Inicializando conexin con la base de datos (Prisma).');
 
     try {
       await this.$connect();
-      this.logger.log('Conexión Prisma establecida correctamente.');
+      this.logger.log('Conexin Prisma establecida correctamente.');
 
-      // Solo ejecutar migraciones si la conexión fue exitosa
+      // Solo ejecutar migraciones si la conexin fue exitosa
       if (process.env.PRISMA_AUTO_MIGRATE !== 'false') {
         this.ensureMigrationsAreApplied();
       }
     } catch (error) {
       this.logger.error('Error al conectar con la base de datos:', (error as Error).message);
-      this.logger.warn('El servidor continuará sin base de datos. Algunas funcionalidades no estarán disponibles.');
+      this.logger.warn('El servidor continuarǭ sin base de datos. Algunas funcionalidades no estarǭn disponibles.');
       // No lanzamos el error para permitir que el servidor inicie de todos modos
     }
   }
 
-  /** Libera la conexión cuando NestJS cierra el módulo e informa el cierre. */
+  /** Libera la conexin cuando NestJS cierra el mdulo e informa el cierre. */
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
-    this.logger.log('Conexión Prisma cerrada.');
+    this.logger.log('Conexin Prisma cerrada.');
   }
 
-  /** Ejecuta prisma migrate deploy si no se ha desactivado explícitamente. */
+  /** Ejecuta prisma migrate deploy si no se ha desactivado explcitamente. */
   private ensureMigrationsAreApplied(): void {
-    // Permite desactivar la auto-aplicación en entornos (tests, CI) donde no sea deseable.
+    // Permite desactivar la auto-aplicacin en entornos (tests, CI) donde no sea deseable.
     if (process.env.PRISMA_AUTO_MIGRATE === 'false') {
       this.logger.log('PRISMA_AUTO_MIGRATE=false, se omite prisma migrate deploy.');
       return;
@@ -83,9 +83,9 @@ export class PrismaService
       }
     }
 
-    // Omite la auto migración si, incluso tras cargar el .env, la URL no está definida.
+    // Omite la auto migracin si, incluso tras cargar el .env, la URL no estǭ definida.
     if (!process.env.DATABASE_URL) {
-      this.logger.warn('DATABASE_URL no está definido; se omite prisma migrate deploy.');
+      this.logger.warn('DATABASE_URL no estǭ definido; se omite prisma migrate deploy.');
       return;
     }
 
@@ -102,13 +102,13 @@ export class PrismaService
       this.logger.warn(
         'No fue posible ejecutar prisma migrate deploy. Revisa DATABASE_URL y la conectividad.',
       );
-      this.logger.warn('El servidor continuará pero puede tener problemas con la base de datos.');
+      this.logger.warn('El servidor continuarǭ pero puede tener problemas con la base de datos.');
       // NO lanzamos el error para permitir que el servidor inicie
     }
   }
 
   /**
-   * Determina el archivo .env a cargar según NODE_ENV para exponer DATABASE_URL al proceso actual.
+   * Determina el archivo .env a cargar segǧn NODE_ENV para exponer DATABASE_URL al proceso actual.
    */
   private resolveEnvFilePath(): string | undefined {
     const cwd = process.cwd();
@@ -121,7 +121,7 @@ export class PrismaService
       }
     }
 
-    this.logger.warn('No se encontró un archivo .env para cargar DATABASE_URL automáticamente.');
+    this.logger.warn('No se encontr un archivo .env para cargar DATABASE_URL automǭticamente.');
     return undefined;
   }
 }

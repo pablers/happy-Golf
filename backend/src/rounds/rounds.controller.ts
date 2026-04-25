@@ -34,7 +34,7 @@ export class RoundsController {
     return this.roundsService.getById(req.user.userId, id);
   }
 
-  /** Crea una nueva ronda usando el cuerpo de la petición como fuente de datos. */
+  /** Crea una nueva ronda usando el cuerpo de la peticin como fuente de datos. */
   @Post()
   async create(@Request() req, @Body() payload: CreateRoundDto) {
     return this.roundsService.create(req.user.userId, payload);

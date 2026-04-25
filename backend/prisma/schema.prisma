@@ -11,64 +11,35 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  profile   Profile?
-  rounds    Round[]
-}
-
-model Profile {
-  id                String      @id @default(cuid())
-  name              String
-  trainingObjective String?
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId            String      @unique
-  hcpHistory        HcpRecord[]
-  favoriteCourses   GolfCourse[] @relation("FavoriteCourses")
-}
-
-model HcpRecord {
-  id        String   @id @default(cuid())
-  date      DateTime
-  hcp       Float
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  profileId String
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  profile      Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rounds       Round[]
 }
 
 model Round {
-  id           String    @id @default(cuid())
-  date         DateTime
-  roundType    RoundType
-  practiceTime PracticeTime
-  weather      WeatherCondition
-  wind         WindCondition
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String
-  course       GolfCourse @relation(fields: [courseId], references: [id])
-  courseId     String
-  scores       HoleScore[]
-  answers      Json
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-}
-
-model GolfCourse {
-  id           String  @id @default(cuid())
-  name         String
-  address      String?
-  municipality String?
-  province     String?
-  region       String?
-  phone        String?
-  email        String?
-  url          String?
-  latitude     String?
-  longitude    String?
-  rounds       Round[]
-  favoritedBy  Profile[] @relation("FavoriteCourses")
+  id               String           @id @default(cuid())
+  date             DateTime
+  courseId         String
+  courseName       String
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+  practiceTime     PracticeTime
+  weather          WeatherCondition
+  wind             WindCondition
+  roundType        RoundType
+  startingHole     Int              @default(1)
+  scorecard        HoleScore[]
+  emotionalState   Json?
+  reviewQuestions  Json?
+  totalStrokes     Int?
+  totalPutts       Int?
+  toPar            Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 }
 
 model HoleScore {

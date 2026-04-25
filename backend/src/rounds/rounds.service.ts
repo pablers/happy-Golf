@@ -5,7 +5,7 @@ import { UpdateRoundDto } from './dto/update-round.dto';
 import { Round } from './entities/round.entity';
 
 /**
- * Orquesta la lógica de negocio de rondas manteniendo el repositorio encapsulado.
+ * Orquesta la lgica de negocio de rondas manteniendo el repositorio encapsulado.
  */
 @Injectable()
 export class RoundsService {
@@ -16,7 +16,7 @@ export class RoundsService {
     return this.roundsRepository.findByUserId(userId);
   }
 
-  /** Obtiene una ronda si pertenece al usuario, de lo contrario lanza una excepción. */
+  /** Obtiene una ronda si pertenece al usuario, de lo contrario lanza una excepcin. */
   async getById(userId: string, roundId: string): Promise<Round> {
     const round = await this.roundsRepository.findById(roundId);
     if (!round) {
@@ -52,7 +52,7 @@ export class RoundsService {
     await this.roundsRepository.remove(roundId);
   }
 
-  /** Verifica que la ronda existe y pertenece al usuario, reutilizando la lógica de control de acceso. */
+  /** Verifica que la ronda existe y pertenece al usuario, reutilizando la lgica de control de acceso. */
   private async ensureOwnership(userId: string, roundId: string): Promise<void> {
     await this.getById(userId, roundId);
   }
