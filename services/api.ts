@@ -23,7 +23,7 @@ export interface CourseSnapshot {
   region?: string | null;
 }
 
-// Configuración de una ronda tal como viaja entre frontend y backend.
+// Configuracin de una ronda tal como viaja entre frontend y backend.
 export interface RoundSetupPayload {
   course: CourseSnapshot;
   roundType: 'front' | 'back' | 'full';
@@ -32,7 +32,7 @@ export interface RoundSetupPayload {
   wind: 'none' | 'light' | 'moderate' | 'strong';
 }
 
-// Respuesta básica que expone el backend para una ronda guardada.
+// Respuesta bǭsica que expone el backend para una ronda guardada.
 export interface RoundResponse {
   id: string;
   date: string;
@@ -51,7 +51,7 @@ export interface RoundResponse {
   updatedAt: string;
 }
 
-// Datos mínimos necesarios para registrar una nueva ronda en la API.
+// Datos mnimos necesarios para registrar una nueva ronda en la API.
 export type CreateRoundPayload = Pick<RoundResponse, 'date' | 'setup' | 'scores' | 'answers'>;
 
 export const api = {

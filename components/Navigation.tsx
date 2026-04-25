@@ -35,7 +35,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange }) => 
         ariaLabel="Go to Metronome"
       >
         <MetronomeIcon className="w-6 h-6" />
-        <span className="text-xs font-semibold">Metrónomo</span>
+        <span className="text-xs font-semibold">Metrnomo</span>
       </NavButton>
       <NavButton
         isActive={activeView === 'scorecard'}

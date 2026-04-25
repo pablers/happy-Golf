@@ -55,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         <button
           onClick={() => setIsMenuOpen(prev => !prev)}
           className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-          aria-label="Abrir menú"
+          aria-label="Abrir menǧ"
         >
           <MenuIcon className="w-6 h-6" />
         </button>
@@ -63,9 +63,9 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl animate-fade-in-down">
             <nav className="p-2">
               <NavLink to="/" onClick={closeMenu}><ScorecardIcon className="w-5 h-5" /> Nueva Ronda</NavLink>
-              <NavLink to="/analysis" onClick={closeMenu}><AnalysisIcon className="w-5 h-5" /> Análisis</NavLink>
+              <NavLink to="/analysis" onClick={closeMenu}><AnalysisIcon className="w-5 h-5" /> Anlisis</NavLink>
               <NavLink to="/clubhouse" onClick={closeMenu}><GolfBagIcon className="w-5 h-5" /> Mi juego de palos</NavLink>
-              <NavLink to="/metronome" onClick={closeMenu}><MetronomeIcon className="w-5 h-5" /> Metrónomo</NavLink>
+              <NavLink to="/metronome" onClick={closeMenu}><MetronomeIcon className="w-5 h-5" /> Metrnomo</NavLink>
               <div className="my-1 h-px bg-gray-200 dark:bg-gray-700"></div>
               <NavLink to="/profile" onClick={closeMenu}><ProfileIcon className="w-5 h-5" /> Perfil</NavLink>
               <NavLink to="/settings" onClick={closeMenu}><SettingsIcon className="w-5 h-5" /> Ajustes</NavLink>

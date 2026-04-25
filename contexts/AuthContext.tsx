@@ -1,13 +1,12 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { UserProfile } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { GUEST_PROFILE } from '../constants';
+import type { UserProfile } from '../types';
 
 interface AuthContextType {
   token: string | null;
   userProfile: UserProfile | null;
   isLoading: boolean;
-  login: (token: string, profile: UserProfile) => void;
+  login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
   skipLogin: () => void;
   updateProfile: (profile: UserProfile) => Promise<void>;
@@ -15,33 +14,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('golf_token'));
+const GUEST_PROFILE: UserProfile = {
+  name: 'Invitado',
+  hcpHistory: [{ date: new Date().toISOString(), hcp: 36.0 }],
+  favoriteCourseIds: [],
+  trainingObjective: 'recommended',
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('golf_token'));
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const validateToken = async () => {
+    const initAuth = async () => {
       if (token) {
         try {
           const profile = await api.getProfile(token);
           setUserProfile(profile);
         } catch (error) {
-          console.error("Session expired or invalid.", error);
+          console.error('Failed to fetch profile', error);
           localStorage.removeItem('golf_token');
           setToken(null);
-          setUserProfile(null);
         }
       }
       setIsLoading(false);
     };
-    validateToken();
+
+    initAuth();
   }, [token]);
 
-  const login = (newToken: string, profile: UserProfile) => {
-    localStorage.setItem('golf_token', newToken);
-    setToken(newToken);
-    setUserProfile(profile);
+  const login = async (email: string, pass: string) => {
+    const { access_token, user } = await api.login(email, pass);
+    localStorage.setItem('golf_token', access_token);
+    setToken(access_token);
+    setUserProfile(user.profile);
   };
 
   const skipLogin = () => {
