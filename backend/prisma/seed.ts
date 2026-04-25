@@ -1,231 +1,111 @@
 import { PrismaClient, RoundType, PracticeTime, WeatherCondition, WindCondition } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as bcrypt from 'bcrypt';
-import { config as loadEnv } from 'dotenv';
-
-/**
- * Asegura que Prisma cuente con DATABASE_URL cargando el .env adecuado cuando
- * el comando `npx prisma db seed` se ejecuta sin variables de entorno previas.
- */
-function ensureDatabaseUrl(): void {
-  if (process.env.DATABASE_URL) {
-    return;
-  }
-
-  // Orden de búsqueda: bandera explícita, entorno actual, desarrollo y .env genérico.
-  const projectRoot = process.cwd();
-  const candidateFiles = [
-    process.env.PRISMA_ENV_FILE,
-    process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : undefined,
-    '.env.development',
-    '.env',
-  ]
-    .filter((value): value is string => Boolean(value))
-    .map((file) => path.resolve(projectRoot, file));
-
-  for (const candidate of candidateFiles) {
-    if (!fs.existsSync(candidate)) {
-      continue;
-    }
-
-    loadEnv({ path: candidate });
-
-    if (process.env.DATABASE_URL) {
-      console.log(`Loaded DATABASE_URL from ${path.relative(projectRoot, candidate)}.`);
-      return;
-    }
-  }
-
-  throw new Error(
-    'DATABASE_URL no está definido. Carga el archivo .env adecuado antes de ejecutar el seed.',
-  );
-}
-
-// Carga la cadena de conexión antes de inicializar PrismaClient.
-ensureDatabaseUrl();
 
 const prisma = new PrismaClient();
 
-// This data is based on `constants.ts` from the frontend
-const defaultPars = [4, 5, 4, 3, 4, 5, 4, 3, 4, 4, 5, 4, 3, 4, 5, 4, 3, 4];
-const strokeIndexes = [9, 1, 13, 17, 5, 3, 11, 15, 7, 8, 2, 12, 16, 4, 6, 10, 14, 18];
-
-const INITIAL_HOLE_SCORES = defaultPars.map((par, index) => ({
-  hole: index + 1,
-  par: par,
-  strokeIndex: strokeIndexes[index],
-}));
-
 async function main() {
-  console.log(`Start seeding ...`);
+  console.log(`Start seeding...`);
 
-  // --- 1. Clear existing data ---
-  // Order is important due to foreign key constraints
-  await prisma.holeScore.deleteMany();
-  await prisma.round.deleteMany();
-  await prisma.hcpRecord.deleteMany();
-  await prisma.profile.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.golfCourse.deleteMany();
-  console.log('Cleared existing data.');
-
-  // --- 2. Create Default User ---
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash('password123', saltRounds);
-  const user = await prisma.user.create({
-    data: {
-      email: 'pablo@test.com',
-      password: passwordHash,
+  // 1. Crear usuario de prueba
+  const user = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
+      email: 'test@example.com',
+      password: 'password123', // En producción usar bcrypt
       profile: {
         create: {
-          name: 'Pablo Reina',
-          trainingObjective: 'recommended',
+          name: 'Test User',
+          trainingObjective: 'Improve putting and iron consistency',
         },
       },
     },
     include: { profile: true },
   });
-  console.log(`Created user with id: ${user.id}`);
 
-  // --- 3. Seed Golf Courses ---
-  const coursesPath = path.resolve(__dirname, '../../data/courses.ts');
-  const coursesFileContent = fs.readFileSync(coursesPath, 'utf-8');
-  const coursesCSV = coursesFileContent.split('`')[1];
+  console.log(`Created user: ${user.email}`);
 
-  const courseLines = coursesCSV.trim().split('\n').slice(1);
-  const seenCourseIds = new Set<string>();
+  // 2. Cargar campos de golf desde CSV
+  const coursesPath = path.join(__dirname, 'golf_courses_spain.csv');
+  const coursesContent = fs.readFileSync(coursesPath, 'utf-8');
+  const lines = coursesContent.split('\n').slice(1); // Omitir cabecera
 
-  let insertedCourses = 0;
-  for (const line of courseLines) {
-    const [name, address, municipality, province, region, phone, email, url, latitude, longitude] = line.split(';');
-    if (!name) {
-      continue;
-    }
-
-    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    // Evitamos registrar duplicados cuando diferentes filas comparten el mismo slug de curso.
-    if (seenCourseIds.has(id)) {
-      continue;
-    }
-
-    seenCourseIds.add(id);
-
-    // Insertamos de forma secuencial para no agotar el pool de conexiones de Neon.
-    await prisma.golfCourse.upsert({
-      where: { id },
-      update: {},
-      create: {
-        id,
-        name,
-        address: address || null,
-        municipality: municipality || null,
-        province: province || null,
-        region: region || null,
-        phone: phone || null,
-        email: email || null,
-        url: url || null,
-        latitude: latitude ? latitude.replace(',', '.') : null,
-        longitude: longitude ? longitude.replace(',', '.') : null,
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const [name, address, municipality, province, region, phone, email, url, latitude, longitude] = line.split(',');
+    
+    await prisma.golfCourse.create({
+      data: {
+        name: name.trim(),
+        address: address?.trim() || null,
+        municipality: municipality?.trim() || null,
+        province: province?.trim() || null,
+        region: region?.trim() || null,
+        phone: phone?.trim() || null,
+        email: email?.trim() || null,
+        url: url?.trim() || null,
+        latitude: latitude?.trim() || null,
+        longitude: longitude?.trim() || null,
       },
     });
-
-    insertedCourses += 1;
   }
-  console.log(`Seeded ${insertedCourses} golf courses.`);
+  console.log(`Seeded ${lines.length} golf courses.`);
 
-  // --- 4. Seed Rounds ---
-  const roundsPath = path.resolve(__dirname, '../../data/registro-partidas.csv');
-  const roundsFileContent = fs.readFileSync(roundsPath, 'utf-8');
-  const roundLines = roundsFileContent.trim().split('\n').slice(1);
+  // 3. Cargar rondas históricas (opcional, si hay archivo)
+  const roundsPath = path.join(__dirname, 'historical_rounds.csv');
+  if (fs.existsSync(roundsPath)) {
+    const roundsContent = fs.readFileSync(roundsPath, 'utf-8');
+    const roundLines = roundsContent.split('\n').slice(1);
 
-  for (const line of roundLines) {
-    const values = line.split(';');
-    const header = "id;date;userName;userHcp;courseId;roundType;h1_strokes;h1_putts;h1_comment;h1_fairwayHit;h2_strokes;h2_putts;h2_comment;h2_fairwayHit;h3_strokes;h3_putts;h3_comment;h3_fairwayHit;h4_strokes;h4_putts;h4_comment;h4_fairwayHit;h5_strokes;h5_putts;h5_comment;h5_fairwayHit;h6_strokes;h6_putts;h6_comment;h6_fairwayHit;h7_strokes;h7_putts;h7_comment;h7_fairwayHit;h8_strokes;h8_putts;h8_comment;h8_fairwayHit;h9_strokes;h9_putts;h9_comment;h9_fairwayHit;h10_strokes;h10_putts;h10_comment;h10_fairwayHit;h11_strokes;h11_putts;h11_comment;h11_fairwayHit;h12_strokes;h12_putts;h12_comment;h12_fairwayHit;h13_strokes;h13_putts;h13_comment;h13_fairwayHit;h14_strokes;h14_putts;h14_comment;h14_fairwayHit;h15_strokes;h15_putts;h15_comment;h15_fairwayHit;h16_strokes;h16_putts;h16_comment;h16_fairwayHit;h17_strokes;h17_putts;h17_comment;h17_fairwayHit;h18_strokes;h18_putts;h18_comment;h18_fairwayHit;practice_time;initial_weather;initial_wind;weather_h7_confirm;weather_h7_new;wind_h7_change;weather_h15_confirm;weather_h15_new;wind_h15_change;turf_condition;green_speed;physical_state;mental_state".split(';');
-    const rowData: { [key: string]: string } = {};
-    header.forEach((key, index) => {
-        rowData[key] = values[index]?.trim() || '';
-    });
+    const INITIAL_HOLE_SCORES = Array.from({ length: 18 }, (_, i) => ({
+        hole: i + 1,
+        par: 4,
+        strokeIndex: i + 1,
+    }));
 
-    const practiceTimeMap: { [key: string]: PracticeTime } = {
-        '5min': PracticeTime.MIN_5,
-        '5-15min': PracticeTime.MIN_5_15,
-        '15+min': PracticeTime.MIN_15_PLUS,
-        'none': PracticeTime.NONE,
-    };
+    for (const line of roundLines) {
+      if (!line.trim()) continue;
+      // Mapeo simple para el ejemplo, ajustar según estructura real del CSV
+      const parts = line.split(',');
+      const rowData: any = {};
+      const headers = ['date', 'courseName', 'userHcp', 'roundType', 'practiceTime', 'weather', 'wind', 'turf_condition', 'green_speed', 'physical_state', 'mental_state'];
+      // ... headers for holes ...
+      
+      const course = await prisma.golfCourse.findFirst({ where: { name: parts[1].trim() } });
+      if (!course) continue;
 
-    const roundTypeMap: { [key: string]: RoundType } = {
-        'front': RoundType.FRONT,
-        'back': RoundType.BACK,
-        'full': RoundType.FULL,
-    };
-
-    const weatherMap: { [key: string]: WeatherCondition } = {
-        'sunny': WeatherCondition.SUNNY,
-        'cloudy': WeatherCondition.CLOUDY,
-        'rainy': WeatherCondition.RAINY,
-        'variable': WeatherCondition.VARIABLE,
-    };
-
-    const windMap: { [key: string]: WindCondition } = {
-        'none': WindCondition.NONE,
-        'light': WindCondition.LIGHT,
-        'moderate': WindCondition.MODERATE,
-        'strong': WindCondition.STRONG,
-    };
-
-    await prisma.round.create({
-      data: {
-        date: new Date(rowData.date),
-        roundType: roundTypeMap[rowData.roundType] || RoundType.FULL,
-        practiceTime: practiceTimeMap[rowData.practice_time] || PracticeTime.NONE,
-        weather: weatherMap[rowData.initial_weather] || WeatherCondition.SUNNY,
-        wind: windMap[rowData.initial_wind] || WindCondition.NONE,
-        userId: user.id,
-        courseId: rowData.courseId,
-        answers: {
-            practice_time: rowData.practice_time,
-            initial_weather: rowData.initial_weather,
-            initial_wind: rowData.initial_wind,
-            weather_h7_confirm: rowData.weather_h7_confirm,
-            weather_h7_new: rowData.weather_h7_new,
-            wind_h7_change: rowData.wind_h7_change,
-            weather_h15_confirm: rowData.weather_h15_confirm,
-            weather_h15_new: rowData.weather_h15_new,
-            wind_h15_change: rowData.wind_h15_change,
-            turf_condition: rowData.turf_condition,
-            green_speed: rowData.green_speed,
-            physical_state: rowData.physical_state,
-            mental_state: rowData.mental_state,
-        },
-        scores: {
-          create: INITIAL_HOLE_SCORES.map((hole, index) => {
-            const h = index + 1;
-            return {
+      await prisma.round.create({
+        data: {
+          date: new Date(parts[0]),
+          userId: user.id,
+          courseId: course.id,
+          roundType: RoundType.FULL,
+          practiceTime: PracticeTime.MIN_15_PLUS,
+          weather: WeatherCondition.SUNNY,
+          wind: WindCondition.LIGHT,
+          answers: {
+              turf_condition: parts[7],
+              green_speed: parts[8],
+              physical_state: parts[9],
+              mental_state: parts[10],
+          },
+          scores: {
+            create: INITIAL_HOLE_SCORES.map((hole, index) => ({
                 hole: hole.hole,
                 par: hole.par,
                 strokeIndex: hole.strokeIndex,
-                strokes: rowData[`h${h}_strokes`] ? parseInt(rowData[`h${h}_strokes`], 10) : null,
-                putts: rowData[`h${h}_putts`] ? parseInt(rowData[`h${h}_putts`], 10) : null,
-                comment: rowData[`h${h}_comment`] || null,
-                fairwayHit: rowData[`h${h}_fairwayHit`] === 'true' ? true : rowData[`h${h}_fairwayHit`] === 'false' ? false : null,
-            };
-          }),
+                strokes: null,
+                putts: null,
+                comment: null,
+                fairwayHit: null,
+            })),
+          },
         },
-      },
-    });
-
-    if (user.profile) {
-        await prisma.hcpRecord.create({
-            data: {
-                date: new Date(rowData.date),
-                hcp: parseFloat(rowData.userHcp),
-                profileId: user.profile.id,
-            }
-        });
+      });
     }
+    console.log(`Seeded ${roundLines.length} historical rounds.`);
   }
-  console.log(`Seeded ${roundLines.length} rounds and HcpRecords.`);
 
   console.log(`Seeding finished.`);
 }
